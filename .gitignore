@@ -1,0 +1,29 @@
+# =====================================================
+# .gitignore - Dépôt Cadrage_Prototypage (agileohdain)
+# Cadrage (Matrice.xlsx) + maquette HTML Power BI-like
+# =====================================================
+
+# === Excel / Office ===
+# Fichiers temporaires/lock créés quand un fichier est ouvert
+~$*.xlsx
+~$*.xls
+~$*.xlsm
+~$*.xlsb
+*.tmp
+
+# === Skill cadrage-prototypage ===
+# Cache du contrat DATA (régénéré automatiquement par les scripts)
+clients/*/.data-cache.json
+__pycache__/
+
+# === OS ===
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# === Éditeurs / IDE ===
+.vscode/
+.idea/
+
+# === Divers ===
+*.log

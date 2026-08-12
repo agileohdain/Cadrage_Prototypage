@@ -1,0 +1,43 @@
+{
+  "_comment": "Spec de génération des données fictives (lu par scripts/generate-data.py). Écrit PAR LE SKILL après validation du questionnaire — jamais par l'utilisateur. Le script produit donnees.xlsx (2 années civiles closes) respectant par construction les contraintes de extract-data.py. Période : dynamique (en 2026 -> 2024+2025).",
+  "_comment_seed": "Reproductibilité : même seed + même spec = même classeur.",
+  "seed": 42,
+
+  "_comment_fact": "Table de faits : une ligne = un événement daté. rows_per_month = bornes [min,max] du nb de lignes par mois.",
+  "fact": {"name": "FAIT_VENTES", "pk": "ID_VENTE", "date_col": "DATE", "rows_per_month": [80, 140]},
+
+  "_comment_measures": "Mesures de la faits. trend_pct = croissance annuelle (%). seasonality = 12 multiplicateurs (Jan..Déc). 'per' = mesure liée : valeur = autre mesure x ratio (ex. MINUTES ~ NB_KM x 2,3).",
+  "measures": [
+    {"name": "MONTANT", "avg": 85, "std": 30, "min": 5, "decimals": 2, "trend_pct": 6,
+     "seasonality": [0.8, 0.8, 0.95, 1.0, 1.05, 1.1, 1.0, 0.9, 1.05, 1.1, 1.25, 1.4]},
+    {"name": "QUANTITE", "avg": 3, "std": 1.2, "min": 1, "decimals": 0}
+  ],
+
+  "_comment_dimensions": "Dimensions jointes directement à la faits (FK = pk). values = {modalité: poids} ou [liste à poids égaux]. 'parent' = hiérarchie (ex. Gamme dépend de Categorie) : values imbriquées par valeur parente. Max 40 modalités/colonne. La feuille 'personne' (DIM_CLIENT ici -> regex utilisateur|user|employe|client|person|agent|membre|collab) devient l'entité active.",
+  "dimensions": [
+    {"sheet": "DIM_CLIENT", "pk": "ID_CLIENT", "size": 120, "columns": [
+      {"name": "Segment", "values": {"Particulier": 0.6, "PME": 0.3, "Grand compte": 0.1}},
+      {"name": "Region", "values": {"Nord": 0.35, "Sud": 0.25, "Est": 0.2, "Ouest": 0.2}}
+    ]},
+    {"sheet": "DIM_PRODUIT", "pk": "ID_PRODUIT", "size": 40, "columns": [
+      {"name": "Categorie", "values": {"Logiciel": 0.4, "Materiel": 0.35, "Service": 0.25}},
+      {"name": "Gamme", "parent": "Categorie", "values": {
+        "Logiciel": {"Licence": 0.5, "Abonnement": 0.5},
+        "Materiel": {"Poste de travail": 0.5, "Peripherique": 0.5},
+        "Service": {"Installation": 0.5, "Formation": 0.5}
+      }}
+    ]}
+  ],
+
+  "_comment_bridges": "Ponts N-N optionnels (ex. affectations). Si présents, la faits référence le pont (FK = pk du pont) au lieu des deux dimensions reliées — elles restent atteignables via le pont. Ici : aucun.",
+  "bridges": [],
+
+  "_comment_extra_sheets": "Feuilles NON jointes à la faits : leurs colonnes catégorielles alimentent CATEGORY_COUNTS (donuts 'statut'), les numériques des SCALARS AVG_*, les id des DISTINCT_*. type: categorical | numeric | id (pool = nb de valeurs possibles).",
+  "extra_sheets": [
+    {"name": "FAIT_SAV", "pk": "ID_TICKET", "size": 150, "columns": [
+      {"name": "Statut", "type": "categorical", "values": {"Ouvert": 0.2, "En cours": 0.3, "Resolu": 0.5}},
+      {"name": "DELAI_HEURES", "type": "numeric", "avg": 24, "std": 10, "min": 1, "decimals": 0},
+      {"name": "ID_PRODUIT", "type": "id", "pool": 40}
+    ]}
+  ]
+}

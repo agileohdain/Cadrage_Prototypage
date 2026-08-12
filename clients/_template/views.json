@@ -1,0 +1,42 @@
+{
+  "_comment": "Spec déclarative des vues (lue par scripts/render.py). GÉNÉRÉE mécaniquement par `python build-views.py <client>` depuis clients/<client>/nav.json — ne pas écrire à la main (ce fichier documente le schéma de sortie). Au plus 4 visuels par sous-page (grille 2x2).",
+
+  "labels": {
+    "_comment_label": "Mappings de libellés bruts -> affichage humanisé (accents, casses). Clé = valeur exacte issue de l'Excel."
+  },
+
+  "pages": [
+    {
+      "name": "Exemple",
+      "desc": "Description de la page affichée dans le popover info (i).",
+      "subs": [
+        {
+          "name": "Vue d'ensemble",
+          "kpis": [
+            {"_a": "KPI somme d'une mesure (YoY)", "label": "Total ventes", "agg": "sum", "measure": "<MESURE>", "yoy": true, "fmt": "int", "sub": "en {CUR_YEAR}"},
+            {"_b": "KPI entités actives (YoY)", "label": "Clients actifs", "agg": "active", "yoy": true, "fmt": "int", "sub": "actifs en {CUR_YEAR}"},
+            {"_c": "KPI scalaire statique (pas de YoY)", "label": "Pays couverts", "agg": "scalar", "from": "SCALARS.NB_<DIM>", "fmt": "int", "sub": "présents"},
+            {"_d": "KPI ratio dérivé (YoY)", "label": "Panier moyen", "agg": "ratio", "num": "<MESURE>", "den": "_count", "yoy": true, "fmt": "f1", "sub": "par commande · {CUR_YEAR}"},
+            {"_e": "KPI nommé top-1 (statique)", "label": "Catégorie dominante", "agg": "top", "from": "DIM_COUNTS.<DIM>", "fmt": "text", "sub": "en tête"}
+          ],
+          "visuals": [
+            {"type": "line", "measure": "<MESURE>", "title": "Évolution mensuelle", "unit": "int"},
+            {"type": "ratio-line", "num": "<MESURE_NUM>", "den": "<MESURE_DEN ou _count>", "title": "Ratio par mois", "unit": "f1"},
+            {"type": "donut", "from": "DIM_COUNTS.<DIM> ou CATEGORY_COUNTS.<sheet>.<col> ou BY_DIM.<dim>.<mesure>", "top": 6, "title": "Répartition", "unit": "int", "centerSub": "total", "sub": "année {CUR_YEAR}"},
+            {"type": "hbar", "from": "DIM_COUNTS.<DIM> ou BY_DIM.<dim>.<mesure>", "top": 10, "title": "Top valeurs", "unit": "int", "sub": "année {CUR_YEAR}"}
+          ]
+        }
+      ]
+    }
+  ],
+
+  "_schema_kpi_agg": "sum (measure) | active | scalar (from SCALARS.) | ratio (num/den, den peut être _count, ACTIVE, SCALARS.x, ou une mesure) | top (from DIM_COUNTS., renvoie le top-1 + ex aequo)",
+  "_schema_pitch": "pitch : true (optionnel) sur un KPI ou un visuel = à mettre en avant dans presentation/pitch.md (généré par generate-pitch.py) ; à défaut, heuristique (2 KPI à plus forte |variation| + 1 visuel par sous-page développée)",
+  "_schema_kpi_fmt": "int | km | eur | f1 | dur | pct | text",
+  "_schema_kpi_tokens": "{CUR_YEAR} {PREV_YEAR} {SCALARS.XXX} substitués dans sub",
+  "_schema_visual_type": "line | ratio-line | donut | parts-donut | hbar | table",
+  "_schema_visual_from": "DIM_COUNTS.X | CATEGORY_COUNTS.sheet.col | BY_DIM.dim.mesure (somme sur l'année N)",
+  "_schema_parts_donut": "parts-donut : {total:'SCALARS.X', parts:[{name,from:'SCALARS.Y'}], restLabel:'Autres'} (le reste est calculé)",
+  "_schema_table_cols": "col : {label, source:'name'|'self'|'measure:MESURE'|'SCALARS.X', ratio:{num,den,pct}, num:true, fmt}",
+  "_schema_table_sort": "sortBy : 'self' (défaut) | 'measure:MESURE' | 'name'"
+}

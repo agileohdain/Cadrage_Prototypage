@@ -1,0 +1,63 @@
+{
+  "_comment": "Arbre de navigation en INTENTIONS (écrit PAR LE SKILL après validation du questionnaire, Phase 3). build-views.py l'étend mécaniquement en views.json complet : dispatch KPI/visuels, donut si <= 6 modalités sinon hbar top-10, humanisation, formats inférés. Ne jamais écrire views.json à la main.",
+
+  "labels": {"Grand compte": "Grand compte"},
+
+  "_comment_kpi": "Types de KPI : count (volume faits) | sum {m} | active | ratio {num, den:_count|ACTIVE|mesure|SCALARS.x} | scalar {from: NB_X|AVG_X, sans YoY} | top {from: dim ou CATEGORY_COUNTS.f.c}. label/sub/fmt optionnels (défauts auto). pitch:true optionnel. reliability: fiable(defaut)|partielle|inconnue + source(texte libre) -> marqueur * sur la maquette (issu du Matrice.xlsx).",
+  "_comment_visual": "Types de visuels : line {m} | ratio-line {num, den} | dim {dim, m?, as?} | cat {from: FEUILLE.Col} | stacked {dim, m} | table {dim|cat, m?, cols?, share?}. m optionnel (défaut _count) ; dim/cat = donut si <= 6 modalités sinon hbar (override 'as'). title/unit/sub optionnels (défauts auto). <= 4 visuels et 3-5 KPI par sous-page. reliability/source optionnels (même règle que les KPI).",
+
+  "pages": [
+    {
+      "name": "Ventes",
+      "desc": "Pilotage commercial : chiffre d'affaires, volumes et mix sur {CUR_YEAR} vs {PREV_YEAR}.",
+      "subs": [
+        {
+          "name": "Vue d'ensemble",
+          "kpis": [
+            {"type": "sum", "m": "MONTANT", "label": "Chiffre d'affaires", "fmt": "eur", "pitch": true},
+            {"type": "count", "label": "Ventes"},
+            {"type": "active", "label": "Clients actifs"},
+            {"type": "ratio", "num": "MONTANT", "den": "_count", "label": "Panier moyen", "fmt": "eur",
+             "reliability": "partielle", "source": "Système : ERP — Source : vue vw_ventes (estimé)"}
+          ],
+          "visuals": [
+            {"type": "line", "m": "MONTANT", "title": "CA mensuel"},
+            {"type": "dim", "dim": "Segment", "m": "MONTANT", "title": "CA par segment", "centerSub": "CA"},
+            {"type": "dim", "dim": "Categorie", "title": "Ventes par catégorie"},
+            {"type": "table", "dim": "Region", "m": "MONTANT", "cols": ["QUANTITE"], "title": "Détail par région"}
+          ]
+        },
+        {
+          "name": "Clients",
+          "kpis": [
+            {"type": "active", "label": "Clients actifs"},
+            {"type": "scalar", "from": "NB_SEGMENT", "label": "Segments"},
+            {"type": "top", "from": "Region", "label": "Région dominante"}
+          ],
+          "visuals": [
+            {"type": "dim", "dim": "Region", "title": "Clients par région"},
+            {"type": "stacked", "dim": "Segment", "m": "MONTANT", "title": "CA mensuel par segment"}
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Après-vente",
+      "desc": "Tickets SAV : statuts et délais de résolution.",
+      "subs": [
+        {
+          "name": "Tickets",
+          "kpis": [
+            {"type": "scalar", "from": "NB_FAIT_SAV", "label": "Tickets suivis"},
+            {"type": "scalar", "from": "AVG_DELAI_HEURES", "label": "Délai moyen", "fmt": "int", "sub": "heures"},
+            {"type": "top", "from": "CATEGORY_COUNTS.FAIT_SAV.Statut", "label": "Statut dominant"}
+          ],
+          "visuals": [
+            {"type": "cat", "from": "FAIT_SAV.Statut", "title": "Répartition des statuts"},
+            {"type": "table", "cat": "FAIT_SAV.Statut", "share": "NB_FAIT_SAV", "self_label": "Tickets", "title": "Détail des statuts"}
+          ]
+        }
+      ]
+    }
+  ]
+}
