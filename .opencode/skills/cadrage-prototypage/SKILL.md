@@ -91,19 +91,18 @@ stats). **Bloquant** si le fichier est vide ou manque la colonne `Indicateurs`.
 Je lis ensuite `cadrage.json` pour les étapes suivantes (je ne relis plus
 l'Excel).
 
-### Étape 0.2 — Question 1 : Périmètre priorité (validation)
-Via l'outil `question`, options cliquables avec **les compteurs calculés**
-depuis `cadrage.json` (`stats.scope`) :
-- `Hautes uniquement (N KPI)`
-- `Hautes + Moyennes (N KPI)`
-- `Hautes + Moyennes + Basses (N KPI)`
-(+ saisie libre « Sinon « Type your own answer ». »).
+### Étape 0.2 — Proposition globale unique (scope intégré + schéma + nav)
 
-Je retiens le `scope` (clé `haute` | `haute_moyenne` | `haute_moyenne_basse`),
-qui filtre les KPI entrant dans la maquette. Je le mémorise pour la Phase 1.
+**Scope, calculé depuis `cadrage.json` (`stats.scope`)** — l'échelle ordonnée
+est `haute` (compact) › `haute_moyenne` (défaut) › `haute_moyenne_basse` (riche),
+en ne gardant que les niveaux **réellement présents** (KPI > 0) :
+- **Auto-déduction (n°2)** : si **un seul** niveau de priorité est présent, le
+  `scope` est **forcé** (pas de choix) — je le note dans la proposition.
+- **Sinon**, scope par défaut = `haute_moyenne` ; s'il n'y a pas de « Moyennes »,
+  je prends le niveau intermédiaire disponible, à défaut le plus riche.
 
-### Étape 0.3 — Question 2 : Proposition globale unique
-Je présente en une seule proposition compacte, cohérente de bout en bout :
+Je présente en une seule proposition compacte, cohérente de bout en bout,
+**au scope par défaut** :
 - **Schéma en étoile** dérivé du matrice.xlsx : table de faits (`FAIT_X`),
   **mesures** issues des **Formules** des indicateurs (≤ 3 additives + ≤ 1
   flag 0/1 par taux), **dimensions** issues des **Axes d'analyses**
@@ -119,8 +118,22 @@ Je présente en une seule proposition compacte, cohérente de bout en bout :
   je propose les valeurs canoniques du mode (table ci-dessous), **chaque
   couleur nommée en clair**. Titre/sous-titre déduits du domaine.
 
-→ Une seule validation via l'outil `question` : **Valider** / **Version plus
-riche** / **Version plus compacte** (+ saisie libre).
+→ **Une seule question via l'outil `question` (n°1 — fusion scope + proposition,
+plus de question dédiée au périmètre)** — le scope et la proposition se valident
+ensemble, en un seul aller-retour :
+- si scope **forcé** (1 niveau) : option **Valider** uniquement (+ saisie libre
+  pour ajuster l'arbre de navigation).
+- sinon : **Valider (`<scope>` — N KPI)** / **Version plus riche** (élargit le
+  scope d'un cran : +Moyennes, puis +Basses) / **Version plus compacte**
+  (restreint d'un cran : Hautes uniquement) (+ saisie libre). Si le scope par
+  défaut est déjà à une extrémité de l'échelle, **j'omets** le bouton
+  correspondant (pas d'option inactive).
+
+Le choix **valide** en un seul clic : « Valider » conserve le scope par défaut ;
+« Version plus riche/compacte » décale le scope d'un cran, j'ajuste l'arbre en
+conséquence, puis je passe à la Phase 1 — **sans re-poser la question**. Je
+mémorise le `scope` final (clé `haute` | `haute_moyenne` | `haute_moyenne_basse`)
+pour la Phase 1.
 
 **Couleurs canoniques et cohérence** (mode dérivé de la luminance du Primary) :
 
@@ -254,7 +267,7 @@ existe je passe à l'étape 2, sinon je l'écris depuis l'arbre validé.
 | Sujets | Sous-structure de cadrage (≠ sous-pages) |
 | Indicateurs | Libellés des KPI |
 | Descriptions | Sous-titres / popover info |
-| Priorités | Filtre de périmètre (Question 1) : Haute / Moyenne / Basse |
+| Priorités | Filtre de périmètre (Étape 0.2 — auto si 1 niveau, sinon boutons riche/compact) : Haute / Moyenne / Basse |
 | Provenance systèmes sources | Tooltip du `*` (l'applicatif d'origine) |
 | Sources des données | Tooltip du `*` (table/entrepôt) ; vide → fiabilité `inconnue` |
 | Fiabilités des données | Niveau du marqueur : Fiable / Partielle / Inconnue |
@@ -321,7 +334,8 @@ Formats auto : PCT/TAUX→pct, COUT/PRIX/MONTANT→eur, KM→km, DUREE/DELAI→d
   matrice.xlsx rempli + logo + couleur primaire. Je ne réclame jamais un Excel
   de données — les chiffres sont générés (fictifs).
 - **Périmètre par priorité (bloquant)** : seuls les KPI du scope retenu
-  (Question 1) entrent dans la maquette ; `cadrage.md` couvre l'ensemble.
+  (Étape 0.2) entrent dans la maquette ; `cadrage.md` couvre l'ensemble.
+  Auto-déduction si un seul niveau de priorité est présent (pas de question).
 - **Marqueur de fiabilité (3 niveaux)** : `partielle` → `*` orange,
   `inconnue` → `*` rouge, `fiable` → rien ; tooltip natif + légende pied de
   page ; source de données vide → `inconnue`.
