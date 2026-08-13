@@ -1,0 +1,184 @@
+{
+  "labels": {
+    "Ile-de-France": "Île-de-France",
+    "Operateur Alpha": "Opérateur Alpha",
+    "Operateur Beta": "Opérateur Beta",
+    "Operateur Gamma": "Opérateur Gamma"
+  },
+  "pages": [
+    {
+      "name": "Résultats de la recharge",
+      "desc": "Pilotage de l'activité : sessions, énergie délivrée, revenus et tarif sur {CUR_YEAR} vs {PREV_YEAR}.",
+      "subs": [
+        {
+          "name": "Volumes & revenus",
+          "kpis": [
+            {
+              "label": "Sessions de recharge",
+              "agg": "sum",
+              "measure": "_count",
+              "yoy": true,
+              "fmt": "int",
+              "sub": "en {CUR_YEAR}",
+              "pitch": true
+            },
+            {
+              "label": "Énergie délivrée",
+              "agg": "sum",
+              "measure": "KWH",
+              "yoy": true,
+              "fmt": "int",
+              "sub": "kWh"
+            },
+            {
+              "label": "Chiffre d'affaires recharge",
+              "agg": "sum",
+              "measure": "MONTANT_HT",
+              "yoy": true,
+              "fmt": "eur",
+              "sub": "en {CUR_YEAR}",
+              "pitch": true
+            },
+            {
+              "label": "Prix moyen par kWh",
+              "agg": "ratio",
+              "num": "MONTANT_HT",
+              "den": "KWH",
+              "yoy": true,
+              "fmt": "eur",
+              "sub": "· {CUR_YEAR}",
+              "reliability": "partielle",
+              "source": "Système : Billing — Source : FACT_FACTURATION"
+            }
+          ],
+          "visuals": [
+            {
+              "type": "line",
+              "measure": "KWH",
+              "title": "Énergie délivrée par mois",
+              "unit": "int"
+            },
+            {
+              "type": "line",
+              "measure": "MONTANT_HT",
+              "title": "CA mensuel",
+              "unit": "eur"
+            },
+            {
+              "type": "donut",
+              "from": "BY_DIM.ZONE.MONTANT_HT",
+              "top": 6,
+              "title": "CA par zone",
+              "unit": "eur",
+              "centerSub": "montant ht",
+              "sub": "année {CUR_YEAR}"
+            },
+            {
+              "type": "ratio-line",
+              "num": "MONTANT_HT",
+              "den": "KWH",
+              "title": "Prix moyen par kWh",
+              "unit": "eur",
+              "reliability": "partielle",
+              "source": "Système : Billing — Source : FACT_FACTURATION"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Réseau & qualité de service",
+      "desc": "Parc de bornes, disponibilité technique, usage et expérience client sur {CUR_YEAR} vs {PREV_YEAR}.",
+      "subs": [
+        {
+          "name": "Parc & expérience client",
+          "kpis": [
+            {
+              "label": "Bornes en service",
+              "agg": "scalar",
+              "from": "SCALARS.NB_DIM_BORNE",
+              "fmt": "int",
+              "sub": "parc installé"
+            },
+            {
+              "label": "Taux de disponibilité",
+              "agg": "ratio",
+              "num": "UP_TIME_FLAG",
+              "den": "_count",
+              "yoy": true,
+              "fmt": "pct",
+              "sub": "· {CUR_YEAR}",
+              "pitch": true
+            },
+            {
+              "label": "Taux d'occupation",
+              "agg": "ratio",
+              "num": "_count",
+              "den": "CAPACITE",
+              "yoy": true,
+              "fmt": "pct",
+              "sub": "· {CUR_YEAR}",
+              "reliability": "partielle",
+              "source": "Système : CSMS — Source : FACT_SESSIONS"
+            },
+            {
+              "label": "Clients actifs",
+              "agg": "active",
+              "yoy": true,
+              "fmt": "int",
+              "sub": "actifs en {CUR_YEAR}",
+              "pitch": true
+            },
+            {
+              "label": "Taux de sessions interrompues",
+              "agg": "ratio",
+              "num": "ERREUR_FLAG",
+              "den": "_count",
+              "yoy": true,
+              "fmt": "pct",
+              "sub": "· {CUR_YEAR}",
+              "reliability": "inconnue",
+              "source": "Système : SCADA — Source : non identifiée"
+            }
+          ],
+          "visuals": [
+            {
+              "type": "donut",
+              "from": "BY_DIM.STATUT._count",
+              "top": 6,
+              "title": "Parc par statut",
+              "unit": "int",
+              "centerSub": "total",
+              "sub": "année {CUR_YEAR}"
+            },
+            {
+              "type": "ratio-line",
+              "num": "UP_TIME_FLAG",
+              "den": "_count",
+              "title": "Disponibilité mensuelle",
+              "unit": "int"
+            },
+            {
+              "type": "donut",
+              "from": "BY_DIM.ZONE.ERREUR_FLAG",
+              "top": 6,
+              "title": "Interruptions par zone",
+              "unit": "eur",
+              "centerSub": "erreur flag",
+              "sub": "année {CUR_YEAR}"
+            },
+            {
+              "type": "donut",
+              "from": "BY_DIM.OFFRE._count",
+              "top": 6,
+              "title": "Clients par offre",
+              "unit": "int",
+              "centerSub": "total",
+              "sub": "année {CUR_YEAR}"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

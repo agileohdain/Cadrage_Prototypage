@@ -1,0 +1,60 @@
+{
+  "_comment": "Arbre de navigation en INTENTIONS pour GreenGrid (scope haute_moyenne, 9 KPI). build-views.py l'étend en views.json.",
+
+  "labels": {
+    "Ile-de-France": "Île-de-France",
+    "Operateur Alpha": "Opérateur Alpha",
+    "Operateur Beta": "Opérateur Beta",
+    "Operateur Gamma": "Opérateur Gamma"
+  },
+
+  "pages": [
+    {
+      "name": "Résultats de la recharge",
+      "desc": "Pilotage de l'activité : sessions, énergie délivrée, revenus et tarif sur {CUR_YEAR} vs {PREV_YEAR}.",
+      "subs": [
+        {
+          "name": "Volumes & revenus",
+          "kpis": [
+            {"type": "count", "label": "Sessions de recharge", "pitch": true},
+            {"type": "sum", "m": "KWH", "label": "Énergie délivrée", "fmt": "int", "sub": "kWh"},
+            {"type": "sum", "m": "MONTANT_HT", "label": "Chiffre d'affaires recharge", "fmt": "eur", "pitch": true},
+            {"type": "ratio", "num": "MONTANT_HT", "den": "KWH", "label": "Prix moyen par kWh", "fmt": "eur",
+             "reliability": "partielle", "source": "Système : Billing — Source : FACT_FACTURATION"}
+          ],
+          "visuals": [
+            {"type": "line", "m": "KWH", "title": "Énergie délivrée par mois"},
+            {"type": "line", "m": "MONTANT_HT", "title": "CA mensuel"},
+            {"type": "dim", "dim": "ZONE", "m": "MONTANT_HT", "title": "CA par zone"},
+            {"type": "ratio-line", "num": "MONTANT_HT", "den": "KWH", "title": "Prix moyen par kWh",
+             "reliability": "partielle", "source": "Système : Billing — Source : FACT_FACTURATION"}
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Réseau & qualité de service",
+      "desc": "Parc de bornes, disponibilité technique, usage et expérience client sur {CUR_YEAR} vs {PREV_YEAR}.",
+      "subs": [
+        {
+          "name": "Parc & expérience client",
+          "kpis": [
+            {"type": "scalar", "from": "NB_DIM_BORNE", "label": "Bornes en service", "sub": "parc installé"},
+            {"type": "ratio", "num": "UP_TIME_FLAG", "den": "_count", "label": "Taux de disponibilité", "fmt": "pct", "pitch": true},
+            {"type": "ratio", "num": "_count", "den": "CAPACITE", "label": "Taux d'occupation", "fmt": "pct",
+             "reliability": "partielle", "source": "Système : CSMS — Source : FACT_SESSIONS"},
+            {"type": "active", "label": "Clients actifs", "pitch": true},
+            {"type": "ratio", "num": "ERREUR_FLAG", "den": "_count", "label": "Taux de sessions interrompues", "fmt": "pct",
+             "reliability": "inconnue", "source": "Système : SCADA — Source : non identifiée"}
+          ],
+          "visuals": [
+            {"type": "dim", "dim": "STATUT", "title": "Parc par statut"},
+            {"type": "ratio-line", "num": "UP_TIME_FLAG", "den": "_count", "title": "Disponibilité mensuelle"},
+            {"type": "dim", "dim": "ZONE", "m": "ERREUR_FLAG", "title": "Interruptions par zone"},
+            {"type": "dim", "dim": "OFFRE", "title": "Clients par offre"}
+          ]
+        }
+      ]
+    }
+  ]
+}

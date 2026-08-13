@@ -1,0 +1,227 @@
+{
+  "source": "matrice.xlsx",
+  "stats": {
+    "total": 11,
+    "Haute": 5,
+    "Moyenne": 4,
+    "Basse": 2,
+    "sans_prio": 0,
+    "fiable": 7,
+    "partielle": 2,
+    "inconnue": 2,
+    "scope": {
+      "haute": 5,
+      "haute_moyenne": 9,
+      "haute_moyenne_basse": 11
+    }
+  },
+  "warnings": [],
+  "themes": [
+    {
+      "theme": "Sessions",
+      "sujets": [
+        {
+          "sujet": "Volumes",
+          "kpis": [
+            {
+              "id": "K01",
+              "indicateur": "Nombre de sessions de recharge",
+              "description": "Nombre total de sessions sur la période",
+              "priorite": "Haute",
+              "systeme_source": "CSMS",
+              "source_donnees": "FACT_SESSIONS",
+              "fiabilite": "fiable",
+              "axes": [
+                "par mois",
+                "par zone",
+                "par puissance"
+              ],
+              "formule": "COUNT(ID_SESSION)",
+              "commentaires": ""
+            },
+            {
+              "id": "K02",
+              "indicateur": "Énergie délivrée (kWh)",
+              "description": "Volume total d'énergie distribuée",
+              "priorite": "Haute",
+              "systeme_source": "CSMS",
+              "source_donnees": "FACT_SESSIONS",
+              "fiabilite": "fiable",
+              "axes": [
+                "par mois",
+                "par zone",
+                "par opérateur"
+              ],
+              "formule": "SUM(KWH)",
+              "commentaires": ""
+            }
+          ]
+        },
+        {
+          "sujet": "Revenus",
+          "kpis": [
+            {
+              "id": "K03",
+              "indicateur": "Chiffre d'affaires recharge",
+              "description": "CA HT généré par la recharge",
+              "priorite": "Haute",
+              "systeme_source": "Billing",
+              "source_donnees": "FACT_FACTURATION",
+              "fiabilite": "fiable",
+              "axes": [
+                "par mois",
+                "par zone"
+              ],
+              "formule": "SUM(MONTANT_HT)",
+              "commentaires": ""
+            },
+            {
+              "id": "K04",
+              "indicateur": "Prix moyen par kWh",
+              "description": "Tarif moyen facturé au kWh",
+              "priorite": "Moyenne",
+              "systeme_source": "Billing",
+              "source_donnees": "FACT_FACTURATION",
+              "fiabilite": "partielle",
+              "axes": [
+                "par offre",
+                "par zone"
+              ],
+              "formule": "MONTANT_HT / KWH",
+              "commentaires": "Grille tarifaire en cours d'homogénéisation"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "theme": "Réseau",
+      "sujets": [
+        {
+          "sujet": "Couverture",
+          "kpis": [
+            {
+              "id": "K05",
+              "indicateur": "Bornes en service",
+              "description": "Parc de bornes opérationnelles",
+              "priorite": "Haute",
+              "systeme_source": "CMDB",
+              "source_donnees": "DIM_BORNE",
+              "fiabilite": "fiable",
+              "axes": [
+                "par zone",
+                "par opérateur"
+              ],
+              "formule": "COUNT(STATUT='EN_SERVICE')",
+              "commentaires": ""
+            },
+            {
+              "id": "K06",
+              "indicateur": "Taux de disponibilité",
+              "description": "Disponibilité technique du parc",
+              "priorite": "Haute",
+              "systeme_source": "SCADA",
+              "source_donnees": "FACT_UPTIME",
+              "fiabilite": "fiable",
+              "axes": [
+                "par zone",
+                "par mois"
+              ],
+              "formule": "AVG(UP_TIME_FLAG)",
+              "commentaires": ""
+            },
+            {
+              "id": "K07",
+              "indicateur": "Taux d'occupation",
+              "description": "Taux d'usage du parc installé",
+              "priorite": "Moyenne",
+              "systeme_source": "CSMS",
+              "source_donnees": "FACT_SESSIONS",
+              "fiabilite": "partielle",
+              "axes": [
+                "par zone",
+                "par heure"
+              ],
+              "formule": "SESSIONS / CAPACITE",
+              "commentaires": "Capacité théorique à confirmer"
+            }
+          ]
+        },
+        {
+          "sujet": "Déploiement",
+          "kpis": [
+            {
+              "id": "K08",
+              "indicateur": "Nouvelles bornes déployées",
+              "description": "Mises en service sur la période",
+              "priorite": "Basse",
+              "systeme_source": "CMDB",
+              "source_donnees": "DIM_BORNE",
+              "fiabilite": "fiable",
+              "axes": [
+                "par zone",
+                "par mois"
+              ],
+              "formule": "COUNT(DATE_MISE_EN_SERVICE)",
+              "commentaires": ""
+            },
+            {
+              "id": "K09",
+              "indicateur": "Couverture territoriale",
+              "description": "Densité du réseau vs objectif",
+              "priorite": "Basse",
+              "systeme_source": "",
+              "source_donnees": "",
+              "fiabilite": "inconnue",
+              "axes": [
+                "par région"
+              ],
+              "formule": "COUNT(BORNE) / OBJECTIF",
+              "commentaires": "Référentiel géo à définir"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "theme": "Qualité de service",
+      "sujets": [
+        {
+          "sujet": "Expérience client",
+          "kpis": [
+            {
+              "id": "K10",
+              "indicateur": "Clients actifs",
+              "description": "Clients ayant rechargé sur la période",
+              "priorite": "Moyenne",
+              "systeme_source": "CRM",
+              "source_donnees": "DIM_CLIENT",
+              "fiabilite": "fiable",
+              "axes": [
+                "par zone",
+                "par offre"
+              ],
+              "formule": "DISTINCT(ID_CLIENT)",
+              "commentaires": ""
+            },
+            {
+              "id": "K11",
+              "indicateur": "Taux de sessions interrompues",
+              "description": "Part des sessions en échec",
+              "priorite": "Moyenne",
+              "systeme_source": "SCADA",
+              "source_donnees": "",
+              "fiabilite": "inconnue",
+              "axes": [
+                "par zone",
+                "par cause"
+              ],
+              "formule": "SUM(ERREUR_FLAG) / COUNT",
+              "commentaires": "Cause non systématiquement renseignée"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

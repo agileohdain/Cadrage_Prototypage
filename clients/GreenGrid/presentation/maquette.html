@@ -1,0 +1,584 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pilotage de la recharge</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<style>
+:root{
+  --primary:#00a1b1;
+  --surface:#ffffff;
+  --canvas:#f1f5f9;
+  --card-bg:#ffffff;
+  --border:#cbd5e1;
+  --text-primary:#0F172A;
+  --text-secondary:#64748B;
+  --on-primary:#0F172A;
+}
+
+:root{--gap:16px;}
+html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#0B1220;font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;}
+#viewport{position:fixed;inset:0;overflow:hidden;}
+.slide{position:absolute;left:0;top:0;width:1920px;height:1080px;transform-origin:0 0;background:var(--canvas);}
+
+/* Bandeau / Logo */
+.banner{position:absolute;left:0;top:0;width:100%;height:97px;background:var(--primary);clip-path:polygon(342px 0,100% 0,100% 97px,267px 97px);z-index:1;}
+.logo-zone{position:absolute;left:0;top:0;width:320px;height:97px;background:var(--surface);clip-path:polygon(0 0,320px 0,244px 97px,0 97px);display:flex;align-items:center;justify-content:center;padding-right:36px;z-index:2;}
+.logo-zone img{max-height:70px;max-width:230px;object-fit:contain;}
+.banner-txt{position:absolute;left:360px;right:48px;top:0;height:97px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:var(--on-primary);pointer-events:none;z-index:2;}
+.banner-txt h1{margin:0;font-size:26px;font-weight:700;letter-spacing:.02em;}
+.banner-txt p{margin:0;font-size:13px;opacity:.92;}
+
+/* Infobulle info */
+.info-wrap{position:absolute;top:28px;right:16px;z-index:70;}
+.info-ico{width:40px;height:40px;border-radius:50%;background:var(--surface);color:var(--primary);font-size:20px;font-weight:800;font-family:Georgia,'Times New Roman',serif;display:flex;align-items:center;justify-content:center;cursor:help;box-shadow:0 2px 6px rgba(0,0,0,.12);border:none;}
+.popover{position:absolute;top:46px;right:0;width:400px;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.14);display:none;z-index:80;padding:16px;max-height:470px;overflow:auto;}
+.info-wrap:hover .popover,.info-wrap:focus-within .popover{display:block;}
+.pop-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--primary);margin-bottom:0;}
+.pop-desc{font-size:12px;line-height:1.45;color:var(--text-secondary);margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--border);}
+.pop-sub{display:flex;align-items:center;gap:8px;padding:8px;border-radius:6px;font-size:12px;color:var(--text-primary);cursor:pointer;}
+.pop-sub:hover{background:var(--canvas);}
+.pop-sub.on{background:var(--canvas);font-weight:600;}
+.pop-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.pop-note{margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-size:11px;font-style:italic;line-height:1.45;color:var(--text-secondary);}
+.pop-note .rel-mark{margin-left:0;font-style:normal;}
+
+/* Pane filtres */
+.pane{position:absolute;left:var(--gap);top:calc(97px + var(--gap));width:235px;bottom:var(--gap);background:var(--surface);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:var(--gap);z-index:3;box-shadow:0 2px 8px rgba(0,0,0,.05);overflow-y:auto;}
+.pane-head{display:flex;align-items:center;gap:8px;padding-bottom:8px;border-bottom:1px solid var(--border);color:var(--primary);font-weight:600;font-size:13px;}
+.fgroup{display:flex;flex-direction:column;gap:8px;}
+.flabel{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text-secondary);}
+.chiclets{display:flex;flex-wrap:wrap;gap:8px;}
+.chiclet{height:32px;padding:0 16px;border-radius:8px;font-size:12px;font-weight:500;background:var(--canvas);color:var(--text-secondary);border:1px solid var(--border);cursor:pointer;display:inline-flex;align-items:center;transition:all .12s;}
+.chiclet:hover{background:var(--border);}
+.chiclet.on{background:var(--primary);color:var(--on-primary);border-color:var(--primary);font-weight:600;}
+.dd{position:relative;}
+.dd-btn{width:100%;height:32px;border-radius:8px;font-size:12px;font-weight:500;background:var(--surface);color:var(--text-primary);border:1px solid var(--border);cursor:pointer;display:flex;align-items:center;justify-content:space-between;padding:0 8px;}
+.dd-btn:hover{border-color:var(--primary);}
+.dd-btn .chev{width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;border-top:5px solid var(--text-secondary);}
+.dd.open .chev{border-top:none;border-bottom:5px solid var(--text-secondary);}
+.dd-menu{position:absolute;top:34px;left:0;right:0;background:var(--surface);border:1px solid var(--border);border-radius:8px;max-height:200px;overflow:auto;z-index:30;display:none;box-shadow:0 6px 16px rgba(0,0,0,.12);}
+.dd.open .dd-menu{display:block;}
+.dd-opt{padding:8px;font-size:12px;color:var(--text-primary);cursor:pointer;}
+.dd-opt:hover{background:var(--canvas);}
+.dd-opt.on{color:var(--primary);font-weight:600;}
+.daterow{display:flex;gap:8px;}
+.datein{flex:1;width:0;height:32px;border-radius:8px;font-size:12px;border:1px solid var(--border);background:var(--surface);color:var(--text-primary);padding:0 8px;box-sizing:border-box;}
+.badge-filt{display:none;align-items:center;gap:8px;font-size:11px;font-weight:600;color:var(--primary);}
+.badge-filt.show{display:flex;}
+.badge-filt .dot{width:8px;height:8px;border-radius:50%;background:var(--primary);}
+.reset-btn{margin-top:auto;display:flex;align-items:center;justify-content:center;gap:8px;height:32px;border-radius:8px;font-size:12px;font-weight:500;color:var(--text-secondary);background:var(--surface);border:1px solid var(--border);cursor:pointer;transition:all .12s;}
+.reset-btn:hover{color:var(--primary);border-color:var(--primary);}
+
+/* Contenu */
+.content{position:absolute;left:267px;top:calc(97px + var(--gap));right:var(--gap);bottom:var(--gap);padding:0;display:flex;flex-direction:column;gap:var(--gap);box-sizing:border-box;}
+#navL1{display:flex;gap:var(--gap);}
+.pill{flex:1;padding:8px 16px;border-radius:8px;font-size:12px;text-align:center;cursor:pointer;transition:all .15s;box-sizing:border-box;}
+.pill.off{background:var(--surface);color:var(--text-secondary);border:1px solid var(--border);font-weight:500;}
+.pill.off:hover{background:var(--canvas);}
+.pill.on{background:var(--primary);color:var(--on-primary);font-weight:600;cursor:default;border:1px solid var(--primary);}
+#navL2{display:flex;align-items:center;gap:24px;border-bottom:1px solid var(--border);padding-bottom:8px;}
+.l2{font-size:12px;cursor:pointer;padding:0;}
+.l2.off{color:var(--text-secondary);font-weight:500;}
+.l2.off:hover{color:var(--text-primary);}
+.l2.on{color:var(--primary);font-weight:600;border-bottom:2px solid var(--primary);cursor:default;}
+
+/* KPI */
+#kpis{display:flex;gap:var(--gap);height:130px;flex-shrink:0;}
+.kpi-card{position:relative;flex:1;height:130px;background:var(--card-bg);border:1px solid var(--border);border-radius:10px;padding:16px;overflow:hidden;display:flex;flex-direction:column;justify-content:space-between;box-shadow:0 1px 2px rgba(0,0,0,.04);box-sizing:border-box;}
+.kpi-bar{position:absolute;left:0;top:0;bottom:0;width:4px;}
+.kpi-bar-primary{background:var(--primary);}
+.kpi-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text-secondary);display:flex;align-items:center;gap:4px;}
+.kpi-label .kpi-label-txt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
+.kpi-value{font-size:28px;font-weight:700;color:var(--text-primary);line-height:1.1;}
+.kpi-sub{font-size:11px;color:var(--text-secondary);}
+.kpi-footer{min-height:24px;display:flex;align-items:center;}
+.trend-badge{display:inline-flex;align-items:center;gap:8px;padding:0 8px;border-radius:6px;font-size:11px;font-weight:600;}
+.badge-pos{background:#ECFDF5;color:#065F46;border:1px solid #A7F3D0;}
+.badge-neg{background:#FFF1F2;color:#9F1239;border:1px solid #FECDD3;}
+.badge-neutral{background:#F1F5F9;color:#475569;border:1px solid #E2E8F0;}
+
+/* Visuels */
+#visuals{flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:var(--gap);}
+.vcard{background:var(--card-bg);border:1px solid var(--border);border-radius:10px;box-shadow:0 1px 2px rgba(0,0,0,.04);display:flex;flex-direction:column;padding:16px;overflow:hidden;min-height:0;}
+.vcard.wide{grid-column:1 / -1;}
+.vhead{display:flex;align-items:baseline;justify-content:space-between;gap:8px;border-bottom:1px solid var(--border);padding-bottom:8px;margin-bottom:8px;flex-shrink:0;}
+.vt{font-size:13px;font-weight:600;color:var(--text-primary);}
+.vs{font-size:11px;color:var(--text-secondary);text-align:right;white-space:nowrap;}
+.chart-holder{position:relative;flex:1;min-height:0;}
+.chart-echarts{position:absolute;inset:0;}
+.donut-center{position:absolute;left:35%;top:50%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;pointer-events:none;line-height:1;text-align:center;}
+.donut-center .dc-value{font-size:22px;font-weight:700;color:var(--text-primary);}
+.donut-center .dc-sub{font-size:11px;color:var(--text-secondary);margin-top:8px;}
+.table-wrap{flex:1;min-height:0;overflow:auto;}
+.table-wrap table{width:100%;border-collapse:collapse;font-size:12px;}
+.table-wrap thead th{position:sticky;top:0;background:var(--primary);color:var(--on-primary);font-weight:600;text-align:left;padding:8px;text-transform:uppercase;font-size:10px;letter-spacing:.03em;}
+.table-wrap tbody td{padding:8px;border-bottom:1px solid var(--border);color:var(--text-primary);text-align:left;}
+.table-wrap tbody tr:nth-child(even){background:var(--canvas);}
+.table-wrap tbody tr:hover{background:var(--border);}
+.table-wrap td.num,.table-wrap th.num{text-align:right;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;}
+
+/* Marqueur de fiabilité (* = partielle / ◆ = source non identifiée — voir cadrage.md) */
+.rel-mark{display:inline-block;margin-left:3px;font-weight:800;cursor:help;font-size:16px;line-height:1;vertical-align:middle;flex:none;}
+.rel-mark.partielle{color:#D97706;}
+.rel-mark.inconnue{color:#DC2626;font-size:12px;}
+</style>
+</head>
+<body>
+<div id="viewport">
+  <div class="slide" id="slide">
+    <div class="banner"></div>
+    <div class="logo-zone"><img src="../logo.png" alt="Logo"></div>
+    <div class="banner-txt">
+      <h1>Pilotage de la recharge</h1>
+      <p>Réseau de bornes — 2025 vs 2024</p>
+    </div>
+    <div class="info-wrap">
+      <button class="info-ico" tabindex="0" aria-label="Informations sur la page">i</button>
+      <div class="popover" id="infoPop"></div>
+    </div>
+
+    <aside class="pane" id="filterPane">
+      <div class="pane-head">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
+        Filtres
+      </div>
+      <div class="fgroup"><div class="flabel">Année</div><div class="chiclets" id="fYears"></div></div>
+      <div class="fgroup"><div class="flabel">Trimestre</div><div class="chiclets" id="fQ"></div></div>
+      <div class="fgroup"><div class="flabel">Mois</div><div class="dd" id="fMonthDd"><button class="dd-btn" type="button" data-all="Tous les mois"><span class="dd-val">Tous les mois</span><span class="chev"></span></button><div class="dd-menu" id="fMonthMenu"></div></div></div>
+      <div class="fgroup"><div class="flabel">Période</div><div class="daterow"><input class="datein" id="fFrom" value="01/01/2024" aria-label="Début"><input class="datein" id="fTo" value="31/12/2025" aria-label="Fin"></div></div>
+      <div class="fgroup"><div class="flabel" id="fDimLabel1">—</div><div class="dd" id="fDim1Dd"><button class="dd-btn" type="button" data-all="Toutes"><span class="dd-val">Toutes</span><span class="chev"></span></button><div class="dd-menu" id="fDim1Menu"></div></div></div>
+      <div class="fgroup"><div class="flabel" id="fDimLabel2">—</div><div class="dd" id="fDim2Dd"><button class="dd-btn" type="button" data-all="Tous"><span class="dd-val">Tous</span><span class="chev"></span></button><div class="dd-menu" id="fDim2Menu"></div></div></div>
+      <div class="badge-filt" id="filtBadge"><span class="dot"></span><span>Filtres actifs</span></div>
+      <button class="reset-btn" id="fReset" type="button">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
+        Réinitialiser
+      </button>
+    </aside>
+
+    <main class="content">
+      <nav id="navL1"></nav>
+      <nav id="navL2"></nav>
+      <div id="kpis"></div>
+      <div id="visuals"></div>
+    </main>
+  </div>
+</div>
+
+<script>
+'use strict';
+/* ================= DATA + SPEC (injectés par render.py) ================= */
+const DATA = {"N":24,"MONTH_META":[{"year":2024,"month":1,"quarter":1},{"year":2024,"month":2,"quarter":1},{"year":2024,"month":3,"quarter":1},{"year":2024,"month":4,"quarter":2},{"year":2024,"month":5,"quarter":2},{"year":2024,"month":6,"quarter":2},{"year":2024,"month":7,"quarter":3},{"year":2024,"month":8,"quarter":3},{"year":2024,"month":9,"quarter":3},{"year":2024,"month":10,"quarter":4},{"year":2024,"month":11,"quarter":4},{"year":2024,"month":12,"quarter":4},{"year":2025,"month":1,"quarter":1},{"year":2025,"month":2,"quarter":1},{"year":2025,"month":3,"quarter":1},{"year":2025,"month":4,"quarter":2},{"year":2025,"month":5,"quarter":2},{"year":2025,"month":6,"quarter":2},{"year":2025,"month":7,"quarter":3},{"year":2025,"month":8,"quarter":3},{"year":2025,"month":9,"quarter":3},{"year":2025,"month":10,"quarter":4},{"year":2025,"month":11,"quarter":4},{"year":2025,"month":12,"quarter":4}],"FACTS":{"KWH":[731.4,958.2,929.9,1004.7,967.2,1203.0,1665.9,1529.2,886.2,1434.5,1527.5,1495.4,1070.4,1121.3,1059.2,1434.5,1461.3,806.8,1055.1,1601.0,1463.6,836.5,1670.2,1538.5],"MONTANT_HT":[1236.5,1465.6,1332.9,1428.7,1536.3,1954.1,2492.9,2569.7,1425.2,2244.5,2427.8,2248.9,1636.5,1849.8,1604.0,2202.3,2317.8,1445.3,1742.8,2575.9,2415.4,1357.1,2695.1,2486.6],"CAPACITE":[665.0,870.7,725.6,728.5,697.8,784.7,956.5,1055.8,638.6,958.8,1066.7,888.1,901.8,1079.6,821.3,953.4,971.8,536.5,629.3,994.1,1020.3,569.9,1055.7,900.9],"UP_TIME_FLAG":[102.0,128.0,113.0,111.0,107.0,123.0,150.0,158.0,98.0,148.0,157.0,137.0,132.0,154.0,121.0,151.0,148.0,80.0,95.0,150.0,150.0,84.0,159.0,137.0],"ERREUR_FLAG":[1.9,1.8,2.3,2.2,1.7,1.8,2.1,1.9,1.1,2.7,2.6,2.7,1.5,2.6,2.3,2.3,2.5,1.9,1.7,1.7,2.3,1.2,3.6,2.4],"_count":[102,128,113,111,107,123,150,158,98,148,157,137,132,154,121,151,148,80,95,150,150,84,159,137]},"BY_DIM":{"ZONE":{"Sud":{"KWH":[121.7,210.2,233.7,211.1,164.8,301.1,280.0,373.8,231.6,275.2,389.9,257.6,264.6,240.2,222.1,268.0,251.7,159.5,154.7,358.7,341.3,182.5,277.7,315.4],"MONTANT_HT":[205.4,330.7,338.3,338.5,288.6,509.0,440.7,529.6,384.9,431.5,628.2,383.3,437.8,354.2,335.0,463.7,406.8,285.0,271.2,588.6,571.6,276.9,505.9,555.6],"CAPACITE":[115.6,202.3,177.8,172.3,124.3,207.0,158.7,254.5,161.2,194.8,309.2,133.4,243.5,212.2,154.8,189.8,160.3,124.1,100.6,213.6,217.8,108.3,168.9,189.3],"UP_TIME_FLAG":[18.0,30.0,27.0,24.0,19.0,32.0,26.0,36.0,27.0,30.0,41.0,22.0,36.0,32.0,23.0,31.0,26.0,17.0,15.0,35.0,34.0,17.0,27.0,29.0],"ERREUR_FLAG":[0.3,0.9,0.4,0.7,0.2,0.5,0.2,0.5,0.2,0.5,0.8,0.7,0.3,0.8,0.5,0.6,0.2,0.4,0.1,0.3,0.5,0.3,0.6,0.7],"_count":[18,30,27,24,19,32,26,36,27,30,41,22,36,32,23,31,26,17,15,35,34,17,27,29]},"Nord":{"KWH":[223.3,292.1,201.6,238.0,200.8,272.9,453.4,347.5,270.0,320.5,327.6,318.2,174.3,333.9,255.6,364.9,488.3,221.2,169.4,328.9,356.8,221.5,492.3,401.4],"MONTANT_HT":[388.9,402.0,295.4,340.0,345.5,428.0,692.0,700.5,414.5,422.6,499.3,479.5,257.0,507.9,432.7,557.5,708.7,363.5,307.4,540.3,636.6,331.0,784.6,634.1],"CAPACITE":[197.4,230.2,161.4,151.1,157.4,166.3,277.0,257.2,178.4,194.6,225.1,190.3,143.3,314.2,196.7,239.0,312.2,153.7,99.8,211.7,266.4,167.3,304.4,222.0],"UP_TIME_FLAG":[30.0,34.0,25.0,25.0,24.0,27.0,41.0,41.0,28.0,31.0,35.0,30.0,21.0,43.0,30.0,37.0,47.0,21.0,15.0,31.0,40.0,23.0,48.0,34.0],"ERREUR_FLAG":[0.7,0.5,0.3,0.6,0.5,0.6,0.4,0.4,0.6,0.9,0.7,0.6,0.2,0.9,0.3,0.2,0.7,0.6,0.2,0.2,0.6,0.4,0.8,0.5],"_count":[30,34,25,25,24,27,41,41,28,31,35,30,21,43,30,37,47,21,15,31,40,23,48,34]},"Ouest":{"KWH":[147.2,210.8,193.0,182.1,221.5,277.4,389.8,364.2,180.9,397.2,420.5,475.4,305.5,265.8,328.3,414.6,243.9,232.1,216.1,464.7,304.7,126.5,396.4,393.0],"MONTANT_HT":[266.7,314.2,308.6,208.4,320.3,418.2,686.4,597.7,318.7,666.3,659.5,717.9,426.0,413.5,486.4,610.3,444.3,454.2,369.3,726.1,472.5,230.1,656.7,566.8],"CAPACITE":[135.6,183.9,167.3,123.6,161.7,170.1,258.2,259.0,144.3,265.2,261.0,291.6,223.5,266.3,256.4,288.3,172.5,138.1,136.1,282.6,208.8,91.0,246.5,233.9],"UP_TIME_FLAG":[22.0,28.0,25.0,20.0,23.0,28.0,40.0,34.0,21.0,39.0,41.0,43.0,34.0,37.0,37.0,43.0,27.0,24.0,20.0,42.0,30.0,13.0,39.0,34.0],"ERREUR_FLAG":[0.4,0.2,0.7,0.2,0.3,0.1,0.9,0.7,0.0,0.7,0.6,0.7,0.6,0.2,1.0,0.8,0.7,0.4,0.5,0.8,0.8,0.0,1.1,0.5],"_count":[22,28,25,20,23,28,40,34,21,39,41,43,34,37,37,43,27,24,20,42,30,13,39,34]},"Ile-de-France":{"KWH":[71.5,109.5,168.8,137.7,204.2,129.7,202.0,179.9,72.4,147.6,158.8,226.9,186.1,108.5,134.4,159.4,205.6,124.4,240.2,258.1,170.6,131.5,160.0,180.3],"MONTANT_HT":[134.3,253.7,195.4,197.3,339.1,222.2,286.7,316.5,118.2,215.9,243.9,332.2,286.8,208.7,199.4,234.2,314.2,212.5,357.8,414.2,276.5,219.8,259.2,298.4],"CAPACITE":[77.9,132.3,111.1,104.6,134.1,81.4,104.6,113.5,47.9,101.5,105.9,140.9,156.3,113.6,115.9,95.9,115.4,72.4,128.8,173.2,128.1,88.1,110.8,102.3],"UP_TIME_FLAG":[12.0,19.0,18.0,15.0,23.0,13.0,17.0,20.0,8.0,16.0,15.0,21.0,22.0,15.0,15.0,17.0,18.0,11.0,21.0,25.0,18.0,13.0,15.0,16.0],"ERREUR_FLAG":[0.1,0.2,0.5,0.2,0.2,0.1,0.4,0.2,0.0,0.0,0.4,0.3,0.3,0.1,0.1,0.3,0.2,0.2,0.7,0.1,0.0,0.3,0.2,0.3],"_count":[12,19,18,15,23,13,17,20,8,16,15,21,22,15,15,17,18,11,21,25,18,13,15,16]},"Est":{"KWH":[167.7,135.6,132.8,235.8,175.9,221.9,340.7,263.8,131.3,294.0,230.7,217.3,139.9,172.9,118.8,227.6,271.8,69.6,274.7,190.6,290.2,174.5,343.8,248.4],"MONTANT_HT":[241.2,165.0,195.3,344.5,242.8,376.7,387.1,425.5,188.8,508.1,396.9,335.9,228.9,365.6,150.4,336.6,443.8,130.1,437.1,306.6,458.2,299.4,488.7,431.7],"CAPACITE":[138.5,122.0,108.0,176.9,120.3,159.9,158.0,171.6,106.8,202.7,165.5,131.9,135.2,173.3,97.5,140.4,211.4,48.2,164.0,113.0,199.2,115.2,225.1,153.4],"UP_TIME_FLAG":[20.0,17.0,18.0,27.0,18.0,23.0,26.0,27.0,14.0,32.0,25.0,21.0,19.0,27.0,16.0,23.0,30.0,7.0,24.0,17.0,28.0,18.0,30.0,24.0],"ERREUR_FLAG":[0.4,0.0,0.4,0.5,0.5,0.5,0.2,0.1,0.3,0.6,0.1,0.4,0.1,0.6,0.4,0.4,0.7,0.3,0.2,0.3,0.4,0.2,0.9,0.4],"_count":[20,17,18,27,18,23,26,27,14,32,25,21,19,27,16,23,30,7,24,17,28,18,30,24]}},"OPERATEUR":{"Operateur Alpha":{"KWH":[358.9,419.4,339.6,356.8,405.5,504.6,702.5,722.9,369.6,610.7,651.7,624.8,441.7,615.0,502.4,652.6,600.3,313.4,474.7,759.5,591.2,320.5,648.1,674.9],"MONTANT_HT":[642.3,672.1,441.3,469.0,665.1,829.1,1016.3,1220.4,575.7,982.1,1037.3,971.7,714.7,920.1,726.0,1049.4,986.4,559.3,791.3,1213.6,977.6,512.7,1091.5,1085.0],"CAPACITE":[318.3,375.1,274.4,255.9,298.7,352.7,400.1,482.8,280.9,404.8,455.1,372.7,394.2,533.5,352.2,431.4,404.7,183.1,289.5,501.1,426.6,219.2,424.1,392.5],"UP_TIME_FLAG":[51.0,56.0,44.0,39.0,44.0,52.0,62.0,73.0,43.0,64.0,66.0,59.0,56.0,77.0,54.0,70.0,64.0,30.0,42.0,71.0,63.0,32.0,62.0,60.0],"ERREUR_FLAG":[0.8,1.0,0.8,0.4,0.6,0.9,0.8,0.9,0.5,1.5,0.9,0.7,0.8,1.2,1.3,1.3,1.1,0.5,0.6,0.9,0.7,0.5,1.5,1.0],"_count":[51,56,44,39,44,52,62,73,43,64,66,59,56,77,54,70,64,30,42,71,63,32,62,60]},"Operateur Gamma":{"KWH":[176.3,197.4,232.3,296.2,200.8,256.3,483.4,324.9,215.6,382.6,392.0,301.0,198.7,157.5,176.1,315.3,324.0,152.4,210.1,387.0,281.5,217.4,485.5,293.4],"MONTANT_HT":[284.6,299.7,405.1,398.5,305.6,404.1,763.7,565.0,290.0,556.5,607.7,480.6,338.1,306.0,237.8,457.2,567.0,293.8,362.7,621.1,441.8,361.3,774.0,477.9],"CAPACITE":[154.9,179.8,172.6,217.8,136.0,149.6,283.3,230.3,123.2,253.3,261.9,184.7,178.4,194.6,151.3,221.1,230.2,91.7,128.8,224.0,187.6,141.0,311.8,170.3],"UP_TIME_FLAG":[24.0,26.0,28.0,33.0,22.0,24.0,46.0,35.0,20.0,38.0,40.0,27.0,27.0,26.0,22.0,32.0,35.0,15.0,19.0,37.0,28.0,22.0,47.0,26.0],"ERREUR_FLAG":[0.6,0.0,0.7,1.2,0.4,0.2,0.7,0.5,0.3,0.6,0.4,0.7,0.0,0.3,0.4,0.2,0.5,0.6,0.6,0.1,0.3,0.4,1.0,0.6],"_count":[24,26,28,33,22,24,46,35,20,38,40,27,27,26,22,32,35,15,19,37,28,22,47,26]},"Operateur Beta":{"KWH":[196.2,341.4,358.0,351.7,360.9,442.1,480.0,481.4,301.0,441.2,483.8,569.6,430.0,348.8,380.7,466.6,537.0,341.0,370.3,454.5,590.9,298.6,536.6,570.2],"MONTANT_HT":[309.6,493.8,486.6,561.2,565.6,720.9,712.9,784.3,559.5,705.9,782.9,796.6,583.7,623.8,640.2,695.7,764.3,592.1,588.8,741.1,996.0,483.0,829.6,923.7],"CAPACITE":[191.8,315.8,278.6,254.8,263.1,282.4,273.1,342.7,234.5,300.7,349.7,330.7,329.2,351.5,317.8,300.9,336.9,261.7,211.0,269.0,406.1,209.7,319.8,338.1],"UP_TIME_FLAG":[27.0,46.0,41.0,39.0,41.0,47.0,42.0,50.0,35.0,46.0,51.0,51.0,49.0,51.0,45.0,49.0,49.0,35.0,34.0,42.0,59.0,30.0,50.0,51.0],"ERREUR_FLAG":[0.5,0.8,0.8,0.6,0.7,0.7,0.6,0.5,0.3,0.6,1.3,1.3,0.7,1.1,0.6,0.8,0.9,0.8,0.5,0.7,1.3,0.3,1.1,0.8],"_count":[27,46,41,39,41,47,42,50,35,46,51,51,49,51,45,49,49,35,34,42,59,30,50,51]}},"PUISSANCE":{"22 kW":{"KWH":[419.7,505.2,496.5,487.1,481.0,636.2,749.3,805.6,450.3,823.7,650.1,757.5,522.4,630.3,568.5,737.0,838.0,471.3,501.2,820.8,737.8,365.5,903.5,805.8],"MONTANT_HT":[730.3,733.6,701.7,681.6,837.4,1014.9,1098.9,1421.1,686.4,1268.5,986.7,1195.6,770.5,1009.0,877.0,1166.5,1334.0,846.9,873.3,1326.8,1300.7,533.0,1466.9,1339.0],"CAPACITE":[379.8,449.6,393.7,362.8,350.0,430.0,427.5,574.0,326.8,556.0,449.9,459.9,438.8,586.7,444.8,498.7,527.4,298.5,313.1,502.2,511.6,224.1,550.7,475.2],"UP_TIME_FLAG":[59.0,64.0,60.0,54.0,55.0,65.0,67.0,86.0,49.0,86.0,66.0,70.0,64.0,83.0,64.0,80.0,84.0,46.0,47.0,75.0,79.0,34.0,86.0,72.0],"ERREUR_FLAG":[0.9,0.8,1.6,0.9,0.7,0.8,1.0,1.4,0.5,2.1,1.2,1.3,0.8,1.4,1.0,1.4,1.1,1.3,0.6,0.8,0.9,0.7,2.1,1.6],"_count":[59,64,60,54,55,65,67,86,49,86,66,70,64,83,64,80,84,46,47,75,79,34,86,72]},"50 kW":{"KWH":[166.4,233.0,203.1,283.8,284.9,323.9,411.6,382.9,239.5,306.7,356.5,351.9,246.8,242.1,241.9,314.6,367.9,175.1,230.3,318.4,408.4,243.5,377.5,339.9],"MONTANT_HT":[281.5,399.5,285.7,427.4,371.5,537.2,594.9,553.7,397.9,447.7,545.7,507.3,422.8,427.5,363.0,461.6,576.3,274.9,367.6,528.8,563.5,446.5,581.5,579.5],"CAPACITE":[143.8,214.4,143.2,209.1,202.0,213.0,238.7,263.4,164.7,191.2,251.4,196.6,237.4,234.1,189.0,211.3,261.0,112.2,132.1,197.5,275.9,177.4,257.8,221.8],"UP_TIME_FLAG":[22.0,33.0,25.0,32.0,29.0,34.0,36.0,37.0,26.0,29.0,36.0,31.0,32.0,34.0,28.0,32.0,36.0,16.0,19.0,31.0,39.0,26.0,35.0,32.0],"ERREUR_FLAG":[0.5,0.5,0.4,0.7,0.7,0.7,0.5,0.2,0.5,0.4,0.7,0.7,0.5,0.3,0.6,0.4,0.7,0.1,0.2,0.3,0.4,0.4,0.7,0.4],"_count":[22,33,25,32,29,34,36,37,26,29,36,31,32,34,28,32,36,16,19,31,39,26,35,32]},"150 kW":{"KWH":[145.3,220.0,230.3,233.8,201.3,242.9,505.0,340.7,196.4,304.1,520.9,386.0,301.2,248.9,248.8,382.9,255.4,160.4,323.6,461.8,317.4,227.5,389.2,392.8],"MONTANT_HT":[224.8,332.4,345.6,319.7,327.5,402.0,799.1,595.0,341.0,528.4,895.4,545.9,443.1,413.4,364.0,574.2,407.5,323.5,501.9,720.3,551.2,377.6,646.7,568.1],"CAPACITE":[141.4,206.7,188.7,156.6,145.8,141.7,290.3,218.4,147.1,211.6,365.4,231.6,225.6,258.8,187.5,243.4,183.4,125.8,184.1,294.4,232.8,168.4,247.2,203.9],"UP_TIME_FLAG":[21.0,31.0,28.0,25.0,23.0,24.0,47.0,35.0,23.0,33.0,55.0,36.0,36.0,37.0,29.0,39.0,28.0,18.0,29.0,44.0,32.0,24.0,38.0,33.0],"ERREUR_FLAG":[0.5,0.5,0.3,0.6,0.3,0.3,0.6,0.3,0.1,0.2,0.7,0.7,0.2,0.9,0.7,0.5,0.7,0.5,0.9,0.6,1.0,0.1,0.8,0.4],"_count":[21,31,28,25,23,24,47,35,23,33,55,36,36,37,29,39,28,18,29,44,32,24,38,33]}},"STATUT":{"Maintenance":{"KWH":[29.7,84.6,11.9,71.1,70.1,83.3,58.9,88.3,65.1,35.6,101.8,83.0,31.8,136.1,14.0,99.2,95.0,36.9,68.9,90.6,69.3,60.0,90.0,105.1],"MONTANT_HT":[58.7,142.4,16.7,84.3,134.2,122.2,77.3,168.5,101.4,67.1,172.6,119.0,49.1,171.0,28.2,171.7,135.8,65.4,108.9,168.8,126.1,105.9,153.0,136.2],"CAPACITE":[28.0,67.4,4.7,45.1,65.3,64.0,39.4,64.3,54.8,25.7,74.2,49.5,24.7,94.3,6.7,71.9,48.4,40.6,39.5,78.1,50.3,30.8,49.7,54.8],"UP_TIME_FLAG":[5.0,11.0,1.0,7.0,9.0,9.0,6.0,10.0,8.0,4.0,11.0,8.0,4.0,15.0,2.0,12.0,9.0,5.0,5.0,11.0,8.0,6.0,9.0,8.0],"ERREUR_FLAG":[0.0,0.4,0.1,0.1,0.1,0.1,0.0,0.1,0.1,0.2,0.1,0.2,0.0,0.4,0.1,0.1,0.1,0.1,0.0,0.1,0.2,0.2,0.2,0.3],"_count":[5,11,1,7,9,9,6,10,8,4,11,8,4,15,2,12,9,5,5,11,8,6,9,8]},"En service":{"KWH":[683.4,840.1,911.8,897.2,863.7,1101.7,1585.6,1375.8,797.9,1340.7,1393.7,1371.7,1020.0,949.8,1022.2,1297.2,1343.2,738.1,948.4,1477.7,1312.9,746.7,1540.1,1382.3],"MONTANT_HT":[1150.2,1289.2,1303.1,1301.5,1356.3,1813.3,2391.5,2275.5,1309.0,2072.4,2190.7,2085.8,1555.5,1638.7,1537.8,1977.3,2144.7,1334.1,1573.2,2374.4,2184.0,1194.3,2493.6,2289.3],"CAPACITE":[623.0,774.3,715.1,658.3,611.0,706.4,906.1,942.3,573.9,887.8,965.5,807.9,865.4,940.9,789.1,845.6,904.2,474.7,563.0,900.5,929.5,508.8,981.3,824.0],"UP_TIME_FLAG":[95.0,113.0,111.0,100.0,95.0,112.0,142.0,140.0,88.0,138.0,142.0,125.0,126.0,133.0,116.0,135.0,136.0,72.0,86.0,137.0,136.0,74.0,147.0,125.0],"ERREUR_FLAG":[1.8,1.2,2.2,2.0,1.5,1.7,2.1,1.5,1.0,2.5,2.4,2.5,1.5,2.1,2.1,2.2,2.3,1.7,1.6,1.6,2.1,1.0,3.3,2.1],"_count":[95,113,111,100,95,112,142,140,88,138,142,125,126,133,116,135,136,72,86,137,136,74,147,125]},"Hors service":{"KWH":[18.3,33.5,6.2,36.4,33.4,18.0,21.4,65.1,23.2,58.2,32.0,40.7,18.6,35.4,23.0,38.1,23.1,31.8,37.8,32.7,81.4,29.8,40.1,51.1],"MONTANT_HT":[27.5,34.0,13.1,42.9,45.9,18.6,24.0,125.8,14.9,105.0,64.5,44.1,31.9,40.1,38.0,53.2,37.2,45.7,60.7,32.6,105.3,56.9,48.5,61.1],"CAPACITE":[14.0,29.0,5.8,25.1,21.5,14.3,11.0,49.2,9.9,45.3,27.0,30.7,11.7,44.4,25.5,35.9,19.2,21.2,26.8,15.5,40.5,30.3,24.7,22.1],"UP_TIME_FLAG":[2.0,4.0,1.0,4.0,3.0,2.0,2.0,8.0,2.0,6.0,4.0,4.0,2.0,6.0,3.0,4.0,3.0,3.0,4.0,2.0,6.0,4.0,3.0,4.0],"ERREUR_FLAG":[0.1,0.2,0.0,0.1,0.1,0.0,0.0,0.3,0.0,0.0,0.1,0.0,0.0,0.1,0.1,0.0,0.1,0.1,0.1,0.0,0.0,0.0,0.1,0.0],"_count":[2,4,1,4,3,2,2,8,2,6,4,4,2,6,3,4,3,3,4,2,6,4,3,4]}},"OFFRE":{"Fleet":{"KWH":[173.4,155.6,137.3,142.5,173.1,158.7,237.5,159.2,112.0,214.5,203.2,262.6,166.5,178.3,75.1,144.8,216.6,111.6,91.4,205.9,240.0,110.1,234.6,188.5],"MONTANT_HT":[251.8,217.8,186.2,159.7,296.7,283.5,387.9,261.4,176.7,368.3,312.8,352.9,215.4,245.8,115.8,248.4,315.2,231.4,144.3,364.6,371.6,175.0,378.4,280.2],"CAPACITE":[168.5,124.5,99.6,108.6,128.9,116.0,130.7,124.2,94.4,130.4,162.5,147.2,115.2,170.1,59.3,86.8,128.7,84.5,47.8,131.5,152.8,75.3,160.9,118.0],"UP_TIME_FLAG":[23.0,18.0,18.0,15.0,22.0,17.0,22.0,17.0,13.0,22.0,21.0,22.0,18.0,24.0,9.0,16.0,20.0,13.0,9.0,22.0,23.0,11.0,22.0,18.0],"ERREUR_FLAG":[0.4,0.1,0.2,0.4,0.3,0.3,0.5,0.5,0.1,0.2,0.5,0.2,0.2,0.3,0.0,0.1,0.5,0.4,0.1,0.3,0.3,0.2,0.6,0.6],"_count":[23,18,18,15,22,17,22,17,13,22,21,22,18,24,9,16,20,13,9,22,23,11,22,18]},"Pro":{"KWH":[196.9,316.8,242.1,298.3,273.7,492.6,611.4,645.4,332.5,511.2,572.2,544.5,373.9,373.2,398.6,504.7,484.4,247.5,348.0,543.2,431.4,318.9,537.6,637.0],"MONTANT_HT":[295.7,521.8,365.1,475.4,475.9,765.9,907.0,1123.6,507.4,836.1,984.5,921.3,604.6,690.8,645.9,792.9,792.0,390.7,565.2,806.5,753.0,523.7,895.4,992.4],"CAPACITE":[139.6,321.0,209.6,229.3,206.4,317.0,349.3,438.2,245.4,349.6,419.1,360.0,317.0,373.1,304.7,333.1,305.2,150.7,222.7,331.1,313.3,197.2,340.0,335.5],"UP_TIME_FLAG":[24.0,45.0,31.0,35.0,31.0,50.0,55.0,67.0,38.0,55.0,60.0,54.0,48.0,52.0,47.0,54.0,49.0,22.0,32.0,50.0,46.0,32.0,53.0,54.0],"ERREUR_FLAG":[0.7,0.7,0.8,0.5,0.5,1.0,0.9,0.6,0.6,1.2,1.2,0.9,0.5,0.8,1.2,0.9,0.7,0.5,0.9,0.6,0.7,0.6,1.3,0.5],"_count":[24,45,31,35,31,50,55,67,38,55,60,54,48,52,47,54,49,22,32,50,46,32,53,54]},"Flex":{"KWH":[361.1,485.8,550.5,563.9,520.4,551.7,817.0,724.6,441.7,708.8,752.1,688.3,530.0,569.8,585.5,785.0,760.3,447.7,615.7,851.9,792.2,407.5,898.0,713.0],"MONTANT_HT":[688.9,726.1,781.6,793.6,763.7,904.7,1198.0,1184.7,741.1,1040.1,1130.5,974.7,816.4,913.3,842.3,1161.0,1210.5,823.2,1033.3,1404.8,1290.8,658.3,1421.4,1214.0],"CAPACITE":[356.9,425.2,416.4,390.6,362.5,351.7,476.5,493.4,298.8,478.8,485.1,380.9,469.6,536.4,457.3,533.5,537.9,301.3,358.8,531.5,554.2,297.4,554.8,447.4],"UP_TIME_FLAG":[55.0,65.0,64.0,61.0,54.0,56.0,73.0,74.0,47.0,71.0,76.0,61.0,66.0,78.0,65.0,81.0,79.0,45.0,54.0,78.0,81.0,41.0,84.0,65.0],"ERREUR_FLAG":[0.8,1.0,1.3,1.3,0.9,0.5,0.7,0.8,0.4,1.3,0.9,1.6,0.8,1.5,1.1,1.3,1.3,1.0,0.7,0.8,1.3,0.4,1.7,1.3],"_count":[55,65,64,61,54,56,73,74,47,71,76,61,66,78,65,81,79,45,54,78,81,41,84,65]}},"TYPE_CLIENT":{"Professionnel":{"KWH":[250.1,285.5,302.3,298.1,397.7,579.0,802.9,519.5,353.5,571.4,507.3,719.4,380.7,474.4,444.8,594.2,497.4,309.8,529.7,563.9,516.4,341.1,601.5,629.3],"MONTANT_HT":[515.9,463.7,441.4,428.0,611.2,877.9,1228.5,855.6,564.8,802.2,836.3,1027.6,605.7,818.0,706.7,925.2,759.4,561.3,870.2,956.6,917.8,560.1,1021.1,1023.9],"CAPACITE":[247.0,274.4,239.3,237.4,298.7,370.0,435.0,336.4,241.8,365.9,352.1,402.0,340.5,467.9,349.1,376.7,308.8,242.0,308.1,339.9,370.0,228.9,401.6,373.0],"UP_TIME_FLAG":[40.0,40.0,39.0,34.0,45.0,58.0,72.0,52.0,39.0,56.0,55.0,64.0,48.0,66.0,51.0,60.0,48.0,34.0,48.0,53.0,55.0,34.0,59.0,57.0],"ERREUR_FLAG":[1.1,0.8,1.0,0.6,0.4,0.9,0.8,0.7,0.4,1.0,1.0,1.3,0.5,1.3,1.1,1.0,1.1,0.9,0.6,0.8,0.9,0.4,1.3,1.2],"_count":[40,40,39,34,45,58,72,52,39,56,55,64,48,66,51,60,48,34,48,53,55,34,59,57]},"Particulier":{"KWH":[481.3,672.7,627.6,706.6,569.5,624.0,863.0,1009.7,532.7,863.1,1020.2,776.0,689.7,646.9,614.4,840.3,963.9,497.0,525.4,1037.1,947.2,495.4,1068.7,909.2],"MONTANT_HT":[720.6,1001.9,891.6,1000.7,925.1,1076.2,1264.4,1714.1,860.4,1442.3,1591.5,1221.2,1030.8,1031.8,897.3,1277.0,1558.4,883.9,872.6,1619.2,1497.6,797.0,1674.0,1462.7],"CAPACITE":[418.0,596.3,486.3,491.1,399.1,414.7,521.5,719.4,396.8,592.9,714.6,486.1,561.3,611.7,472.2,576.7,663.0,294.5,321.2,654.2,650.3,341.0,654.1,527.9],"UP_TIME_FLAG":[62.0,88.0,74.0,77.0,62.0,65.0,78.0,106.0,59.0,92.0,102.0,73.0,84.0,88.0,70.0,91.0,100.0,46.0,47.0,97.0,95.0,50.0,100.0,80.0],"ERREUR_FLAG":[0.8,1.0,1.3,1.6,1.3,0.9,1.3,1.2,0.7,1.7,1.6,1.4,1.0,1.3,1.2,1.3,1.4,1.0,1.1,0.9,1.4,0.8,2.3,1.2],"_count":[62,88,74,77,62,65,78,106,59,92,102,73,84,88,70,91,100,46,47,97,95,50,100,80]}}},"DIM_COUNTS":{"ZONE":{"Nord":39,"Ouest":38,"Sud":33,"Est":29,"Ile-de-France":21},"OPERATEUR":{"Operateur Alpha":70,"Operateur Beta":54,"Operateur Gamma":36},"PUISSANCE":{"22 kW":84,"150 kW":38,"50 kW":38},"STATUT":{"En service":145,"Maintenance":11,"Hors service":4},"OFFRE":{"Flex":201,"Pro":144,"Fleet":55},"TYPE_CLIENT":{"Particulier":251,"Professionnel":149}},"CATEGORY_COUNTS":{},"ACTIVE_MASKS":{"357":8391697,"103":34353,"243":11613573,"64":598305,"96":1236993,"309":405625,"157":262213,"223":8718617,"187":10500131,"65":1215745,"310":4195461,"161":344135,"199":5772573,"350":8585281,"365":62777,"314":8658997,"211":8913009,"177":6816779,"222":1069729,"178":1052305,"141":34447,"338":2107023,"42":1069067,"255":14643717,"153":606915,"368":4268289,"264":1114645,"316":3178589,"98":4850177,"235":1579,"335":99713,"188":1083753,"198":311681,"192":1085441,"261":663553,"304":1118441,"345":4000849,"306":5248513,"88":3670545,"17":2106115,"257":12617353,"266":9417,"280":3258115,"313":2672641,"361":12976139,"148":90201,"149":6902549,"383":66665,"123":533249,"212":31,"147":8405021,"214":12619793,"146":4302441,"240":1115265,"152":14984229,"197":5261845,"6":3679645,"114":9077763,"388":9224833,"294":4558525,"30":1081867,"382":532489,"69":12888213,"373":12595905,"195":591273,"18":3212323,"225":839051,"164":12586499,"285":4195423,"363":13762817,"272":6062081,"371":4363487,"97":545697,"109":4203137,"158":3674753,"390":2698279,"134":12604105,"118":538625,"369":331777,"343":4208641,"5":13175179,"9":7642691,"77":2124197,"41":591513,"29":542758,"271":1077314,"139":786946,"154":5312730,"353":801906,"39":8487042,"252":1214730,"44":5002,"379":33314,"182":4393986,"87":13117506,"216":6030602,"169":5515462,"246":8917770,"295":655954,"124":13721606,"305":606818,"332":8587366,"55":1134118,"54":8406530,"179":536594,"347":6392002,"119":12740178,"378":1622146,"296":1086026,"135":8330498,"181":800514,"303":14207494,"215":3212358,"70":13500466,"213":2510978,"116":3162434,"282":4731918,"108":4393830,"85":8930338,"348":6291874,"360":4201774,"251":10514434,"207":65578,"298":2656258,"274":10160770,"173":5254182,"321":2633766,"1":4751426,"48":3195042,"203":8389678,"40":4728098,"62":2277706,"329":330002,"322":2136578,"52":14232066,"331":10816130,"254":13271590,"163":5298706,"260":12659734,"79":5460562,"275":6570770,"342":57442,"265":4207182,"376":10552966,"189":10781122,"7":7357830,"284":1051270,"24":8388610,"4":9896454,"172":11277314,"267":8346,"162":5327038,"400":7389190,"183":589858,"299":14204950,"66":15204514,"128":2435138,"113":9990274,"82":4483074,"392":4849894,"91":1675330,"159":2236426,"245":1106562,"31":13637706,"375":8939590,"356":1081478,"170":4249606,"229":1376258,"83":1279074,"221":9995810,"106":16406,"50":1066762,"219":3002,"289":8401924,"258":9080708,"86":4723716,"104":428044,"359":13683140,"136":12584452,"20":32780,"191":3834116,"292":266412,"384":4335628,"155":13639732,"288":6180,"142":16056492,"336":8586372,"344":12722260,"151":6341036,"242":4460276,"28":6488700,"325":8926028,"67":1802308,"385":4557972,"193":876708,"25":41092,"21":8401692,"238":2140260,"49":11014404,"206":4300,"333":8644,"226":525316,"393":10003908,"256":158268,"233":602876,"2":947332,"101":8980484,"367":4292772,"364":4199132,"354":657476,"355":6955108,"283":547460,"387":1595460,"230":1623172,"35":8519844,"59":4730948,"196":111660,"73":494084,"129":14787236,"318":9441324,"72":9473576,"10":2072,"115":4491848,"247":1048728,"133":1115624,"308":8913416,"268":1873992,"358":4194440,"302":7877128,"43":2175352,"248":10792,"47":8479960,"346":4260872,"208":4794376,"194":8888776,"301":1076296,"121":2400376,"22":1062984,"94":2363656,"176":12585096,"111":1090568,"132":7405576,"381":26008,"281":30792,"15":8467976,"228":10489800,"150":12864136,"138":4227336,"145":4267176,"160":1057288,"127":9307144,"349":4289320,"249":12665864,"231":590488,"12":4895384,"293":2761800,"120":99368,"290":1528528,"391":4493936,"58":786768,"395":139536,"125":6358416,"23":75600,"239":1069072,"78":4466512,"278":36880,"99":65616,"377":9863568,"276":626128,"204":5933584,"84":1060976,"26":950800,"394":8916304,"315":8977936,"100":9749040,"131":6939664,"352":25488,"34":12676304,"200":5243408,"398":2771120,"45":10879536,"234":9078832,"250":655504,"279":13143056,"307":10494096,"232":4358672,"190":213104,"74":8926320,"351":13669744,"263":4260496,"297":1123984,"8":1672464,"122":655520,"27":8928,"237":1643552,"269":9463840,"13":10486048,"57":1638944,"112":8392992,"137":4923488,"324":396896,"236":4885280,"167":5810464,"328":71712,"380":2427168,"144":4640,"143":8463072,"386":4917280,"341":1160928,"374":45344,"244":12597792,"287":2196064,"253":12845600,"53":11567392,"68":8915552,"60":360480,"220":1126432,"92":3839136,"339":4465120,"19":12797792,"291":12866240,"326":8454336,"140":9025600,"224":13797568,"186":559168,"46":9552448,"396":9438272,"93":13866176,"107":4228160,"217":12618944,"262":4260928,"175":5260480,"11":592064,"323":902592,"90":4771520,"63":1444032,"259":64,"36":360512,"317":4194368,"210":9011264,"105":2138176,"180":64,"184":1114176,"61":3216512,"81":540800,"51":529024,"370":149120,"270":4194944,"202":5243008,"168":7144576,"3":5354368,"320":4493952,"37":268416,"185":75904,"372":2154880,"32":12128896,"75":135296,"126":667264,"95":16768,"300":1835136,"366":68736,"209":7164032,"80":10499840,"56":9984,"102":283904,"130":815360,"71":1868544,"16":5286144,"241":10577152,"334":1442304,"327":13908480,"76":1761792,"201":6160896,"286":13116928,"33":248320,"156":1049088,"311":2212352,"218":12635136,"277":7965696,"166":289792,"362":8393728,"330":1573888,"110":8567808,"312":558080,"337":13657088,"205":12355584,"389":1083392,"171":428032,"38":1050624,"14":12634112,"273":1591296,"340":10921984,"165":1320960,"174":1118208,"319":2723840,"89":299008,"227":1085440,"117":4280320,"397":8192,"399":5324800},"SCALARS":{"NB_FAIT_SESSIONS":3093,"NB_DIM_BORNE":160,"NB_DIM_CLIENT":400,"NB_ZONE":5,"NB_OPERATEUR":3,"NB_PUISSANCE":3,"NB_STATUT":3,"NB_OFFRE":3,"NB_TYPE_CLIENT":2,"DISTINCT_FAIT_SESSIONS_ID_SESSION":3093,"DISTINCT_FAIT_SESSIONS_ID_BORNE":160,"DISTINCT_FAIT_SESSIONS_ID_CLIENT":400,"DISTINCT_DIM_BORNE_ID_BORNE":160,"DISTINCT_DIM_CLIENT_ID_CLIENT":400},"META":{"fact_sheet":"FAIT_SESSIONS","date_col":"DATE","measures":["KWH","MONTANT_HT","CAPACITE","UP_TIME_FLAG","ERREUR_FLAG"],"dims":[{"name":"ZONE","via_sheet":"DIM_BORNE"},{"name":"OPERATEUR","via_sheet":"DIM_BORNE"},{"name":"PUISSANCE","via_sheet":"DIM_BORNE"},{"name":"STATUT","via_sheet":"DIM_BORNE"},{"name":"OFFRE","via_sheet":"DIM_CLIENT"},{"name":"TYPE_CLIENT","via_sheet":"DIM_CLIENT"}],"activity_entity":"DIM_CLIENT","category_sources":{}}};
+const SPEC = {"labels": {"Ile-de-France": "Île-de-France", "Operateur Alpha": "Opérateur Alpha", "Operateur Beta": "Opérateur Beta", "Operateur Gamma": "Opérateur Gamma"}, "pages": [{"name": "Résultats de la recharge", "desc": "Pilotage de l'activité : sessions, énergie délivrée, revenus et tarif sur {CUR_YEAR} vs {PREV_YEAR}.", "subs": [{"name": "Volumes & revenus", "kpis": [{"label": "Sessions de recharge", "agg": "sum", "measure": "_count", "yoy": true, "fmt": "int", "sub": "en {CUR_YEAR}", "pitch": true}, {"label": "Énergie délivrée", "agg": "sum", "measure": "KWH", "yoy": true, "fmt": "int", "sub": "kWh"}, {"label": "Chiffre d'affaires recharge", "agg": "sum", "measure": "MONTANT_HT", "yoy": true, "fmt": "eur", "sub": "en {CUR_YEAR}", "pitch": true}, {"label": "Prix moyen par kWh", "agg": "ratio", "num": "MONTANT_HT", "den": "KWH", "yoy": true, "fmt": "eur", "sub": "· {CUR_YEAR}", "reliability": "partielle", "source": "Système : Billing — Source : FACT_FACTURATION"}], "visuals": [{"type": "line", "measure": "KWH", "title": "Énergie délivrée par mois", "unit": "int"}, {"type": "line", "measure": "MONTANT_HT", "title": "CA mensuel", "unit": "eur"}, {"type": "donut", "from": "BY_DIM.ZONE.MONTANT_HT", "top": 6, "title": "CA par zone", "unit": "eur", "centerSub": "montant ht", "sub": "année {CUR_YEAR}"}, {"type": "ratio-line", "num": "MONTANT_HT", "den": "KWH", "title": "Prix moyen par kWh", "unit": "eur", "reliability": "partielle", "source": "Système : Billing — Source : FACT_FACTURATION"}]}]}, {"name": "Réseau & qualité de service", "desc": "Parc de bornes, disponibilité technique, usage et expérience client sur {CUR_YEAR} vs {PREV_YEAR}.", "subs": [{"name": "Parc & expérience client", "kpis": [{"label": "Bornes en service", "agg": "scalar", "from": "SCALARS.NB_DIM_BORNE", "fmt": "int", "sub": "parc installé"}, {"label": "Taux de disponibilité", "agg": "ratio", "num": "UP_TIME_FLAG", "den": "_count", "yoy": true, "fmt": "pct", "sub": "· {CUR_YEAR}", "pitch": true}, {"label": "Taux d'occupation", "agg": "ratio", "num": "_count", "den": "CAPACITE", "yoy": true, "fmt": "pct", "sub": "· {CUR_YEAR}", "reliability": "partielle", "source": "Système : CSMS — Source : FACT_SESSIONS"}, {"label": "Clients actifs", "agg": "active", "yoy": true, "fmt": "int", "sub": "actifs en {CUR_YEAR}", "pitch": true}, {"label": "Taux de sessions interrompues", "agg": "ratio", "num": "ERREUR_FLAG", "den": "_count", "yoy": true, "fmt": "pct", "sub": "· {CUR_YEAR}", "reliability": "inconnue", "source": "Système : SCADA — Source : non identifiée"}], "visuals": [{"type": "donut", "from": "BY_DIM.STATUT._count", "top": 6, "title": "Parc par statut", "unit": "int", "centerSub": "total", "sub": "année {CUR_YEAR}"}, {"type": "ratio-line", "num": "UP_TIME_FLAG", "den": "_count", "title": "Disponibilité mensuelle", "unit": "int"}, {"type": "donut", "from": "BY_DIM.ZONE.ERREUR_FLAG", "top": 6, "title": "Interruptions par zone", "unit": "eur", "centerSub": "erreur flag", "sub": "année {CUR_YEAR}"}, {"type": "donut", "from": "BY_DIM.OFFRE._count", "top": 6, "title": "Clients par offre", "unit": "int", "centerSub": "total", "sub": "année {CUR_YEAR}"}]}]}], "css": {"primary": "#00a1b1", "surface": "#ffffff", "canvas": "#f1f5f9", "border": "#cbd5e1", "card": "#ffffff"}};
+
+/* ================= MÉTA DÉRIVÉE ================= */
+const N_MONTHS = DATA.N;
+const MONTH_META = DATA.MONTH_META;
+const FACTS = DATA.FACTS;
+const BY_DIM = DATA.BY_DIM || {};
+const DIM_COUNTS = DATA.DIM_COUNTS || {};
+const CATEGORY_COUNTS = DATA.CATEGORY_COUNTS || {};
+const ACTIVE_MASKS = DATA.ACTIVE_MASKS || {};
+const SCALARS = DATA.SCALARS || {};
+const META = DATA.META || {};
+const MEASURES = META.measures || [];
+const DIM_NAMES = (META.dims || []).map(d=>d.name);
+
+const CUR_YEAR = MONTH_META.length ? Math.max(...MONTH_META.map(m=>m.year)) : 0;
+const PREV_YEAR = CUR_YEAR - 1;
+const MONTH_AXIS = ['01','02','03','04','05','06','07','08','09','10','11','12'];
+const MONTH_NAMES = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+const nMonthSet = new Set(MONTH_META.filter(m=>m.year===CUR_YEAR).map(m=>m.month));
+
+/* actifs par mois + masques année N / N-1 */
+const ACTIVES_M = [];
+for (let i=0;i<N_MONTHS;i++){ let c=0; const bit=1<<i; for (const k in ACTIVE_MASKS){ if (ACTIVE_MASKS[k] & bit) c++; } ACTIVES_M.push(c); }
+let _cmask=0,_pmask=0;
+for (let i=0;i<N_MONTHS;i++){ const m=MONTH_META[i]; if (m.year===CUR_YEAR) _cmask |= (1<<i); if (m.year===PREV_YEAR && nMonthSet.has(m.month)) _pmask |= (1<<i); }
+function countActive(mask){ let c=0; for (const k in ACTIVE_MASKS){ if (ACTIVE_MASKS[k] & mask) c++; } return c; }
+const cActifs = countActive(_cmask);
+const pActifs = countActive(_pmask);
+
+function aggregates(){
+  const agg = { cActifs:cActifs, pActifs:pActifs, c__count:0, p__count:0 };
+  for (const mn of MEASURES){ agg['c_'+mn]=0; agg['p_'+mn]=0; }
+  for (let i=0;i<N_MONTHS;i++){
+    const mm=MONTH_META[i];
+    if (mm.year===CUR_YEAR){ for (const mn of MEASURES) agg['c_'+mn]+=FACTS[mn][i]; agg.c__count+=FACTS._count[i]; }
+    else if (mm.year===PREV_YEAR && nMonthSet.has(mm.month)){ for (const mn of MEASURES) agg['p_'+mn]+=FACTS[mn][i]; agg.p__count+=FACTS._count[i]; }
+  }
+  return agg;
+}
+function yearSeries(arr, year){ const out=new Array(12).fill(null); for (let i=0;i<N_MONTHS;i++){ const m=MONTH_META[i]; if (m.year===year) out[m.month-1]=arr[i]; } return out; }
+function yearRatio(numArr, denArr, year){ const out=new Array(12).fill(null); for (let i=0;i<N_MONTHS;i++){ const m=MONTH_META[i]; if (m.year===year && denArr[i]) out[m.month-1]=numArr[i]/denArr[i]; } return out; }
+function sumYearArr(arr){ let s=0; for (let i=0;i<N_MONTHS;i++){ if (MONTH_META[i].year===CUR_YEAR) s+=arr[i]; } return s; }
+
+/* ================= LIBELLÉS / FORMATAGE ================= */
+function humanize(k){
+  if (k==null) return '';
+  let s=String(k);
+  if (SPEC.labels && SPEC.labels[s]) return SPEC.labels[s];
+  s=s.replace(/_/g,' ');
+  if (/[A-Z]/.test(s) && /^[A-Z0-9 _-]+$/.test(s) && /[ ]/.test(s)) s=s.toLowerCase().replace(/\b[a-zà-ÿ]/g,c=>c.toUpperCase());
+  return s;
+}
+function LBL(k){ return humanize(k); }
+function fInt(n){ return Math.round(n).toLocaleString('fr-FR'); }
+function f1(n){ return n.toLocaleString('fr-FR',{maximumFractionDigits:1}); }
+function fKm(n){ return n>=1000 ? (n/1000).toLocaleString('fr-FR',{maximumFractionDigits:1})+' k' : fInt(n); }
+function fDur(min){ min=Math.round(min); const h=Math.floor(min/60), m=min%60; return h>0 ? h+' h '+m : m+' min'; }
+function fEur(n){ return (n>=1000 ? (n/1000).toLocaleString('fr-FR',{maximumFractionDigits:1})+' k' : fInt(n))+' €'; }
+function fmtVal(v, fmt){
+  if (v==null || v==='' ) return '';
+  if (fmt==='km') return fKm(v);
+  if (fmt==='eur') return fEur(v);
+  if (fmt==='f1') return f1(v);
+  if (fmt==='dur') return fDur(v);
+  if (fmt==='pct') return f1(v)+' %';
+  if (fmt==='text') return String(v);
+  return fInt(v);
+}
+function _pct(c,p){ return p ? (c-p)/p*100 : null; }
+function sub(t){ if(!t) return ''; return String(t).replace(/\{CUR_YEAR\}/g,CUR_YEAR).replace(/\{PREV_YEAR\}/g,PREV_YEAR).replace(/\{SCALARS\.([A-Z0-9_]+)\}/g,(m,k)=> SCALARS[k]!=null ? SCALARS[k] : m); }
+
+/* ================= FIABILITÉ (marqueur * + tooltip natif) ================= */
+function escAttr(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function relMark(node){
+  if(!node) return '';
+  var r = node.reliability;
+  if(!r || r==='fiable') return '';
+  var cls = r==='partielle' ? 'partielle' : 'inconnue';
+  var lbl = r==='partielle' ? 'Fiabilité partielle / à valider' : 'Fiabilité inconnue — source non identifiée';
+  var tip = lbl;
+  if(node.source) tip += ' — ' + node.source;
+  tip += '. Détail dans cadrage.md.';
+  var g = r==='partielle' ? '*' : '◆';
+  return '<span class="rel-mark '+cls+'" title="'+escAttr(tip)+'" aria-label="'+escAttr(lbl)+'" role="img">'+g+'</span>';
+}
+function hasReliabilityFlag(){
+  if(!SPEC.pages) return false;
+  for(var i=0;i<SPEC.pages.length;i++){ var p=SPEC.pages[i]; var subs=p.subs||[];
+    for(var j=0;j<subs.length;j++){ var s=subs[j];
+      var ks=s.kpis||[]; for(var a=0;a<ks.length;a++){ if(ks[a].reliability && ks[a].reliability!=='fiable') return true; }
+      var vs=s.visuals||[]; for(var b=0;b<vs.length;b++){ if(vs[b].reliability && vs[b].reliability!=='fiable') return true; }
+    } }
+  return false;
+}
+function reliabilityLegend(){
+  var hasP=false, hasI=false;
+  if(SPEC.pages){
+    for(var pi=0; pi<SPEC.pages.length; pi++){ var pg=SPEC.pages[pi]; var subs=pg.subs||[];
+      for(var si=0; si<subs.length; si++){ var sb=subs[si];
+        var ks=sb.kpis||[]; for(var a=0;a<ks.length;a++){ var rk=ks[a].reliability; if(rk==='partielle') hasP=true; else if(rk==='inconnue') hasI=true; }
+        var vs=sb.visuals||[]; for(var b=0;b<vs.length;b++){ var rv=vs[b].reliability; if(rv==='partielle') hasP=true; else if(rv==='inconnue') hasI=true; }
+      } }
+  }
+  var out='';
+  if(hasP) out+='<br><span class="rel-mark partielle">*</span> Fiabilité partielle / à valider';
+  if(hasI) out+='<br><span class="rel-mark inconnue">◆</span> Source non identifiée';
+  if(hasP||hasI) out+=' — détail dans cadrage.md.';
+  return out;
+}
+
+/* ================= THEME / PALETTE ================= */
+function hexToHsl(hex){ const h=hex.replace('#',''); const r=parseInt(h.substr(0,2),16)/255, g=parseInt(h.substr(2,2),16)/255, b=parseInt(h.substr(4,2),16)/255; const mx=Math.max(r,g,b), mn=Math.min(r,g,b); let hh,s,l=(mx+mn)/2; if (mx===mn){ hh=0; s=0; } else { const d=mx-mn; s=l>0.5?d/(2-mx-mn):d/(mx+mn); switch(mx){ case r: hh=(g-b)/d+(g<b?6:0); break; case g: hh=(b-r)/d+2; break; default: hh=(r-g)/d+4; } hh*=60; } return [hh,s*100,l*100]; }
+function hslToHex(h,s,l){ s/=100; l/=100; const k=n=>(n+h/30)%12, a=s*Math.min(l,1-l), f=n=>l-a*Math.max(-1,Math.min(k(n)-3,Math.min(9-k(n),1))), tx=x=>Math.round(x*255).toString(16).padStart(2,'0'); return '#'+tx(f(0))+tx(f(8))+tx(f(4)); }
+function derivePalette(primary){ const [h,s,l]=hexToHsl(primary); return [primary, hslToHex(h,s,Math.max(15,l-18)), hslToHex(h,Math.max(10,s-12),Math.min(92,l+15)), hslToHex((h+28)%360,Math.max(18,s-8),Math.min(62,l)), hslToHex((h+180)%360,Math.max(14,s-22),Math.min(55,l)), hslToHex(h,Math.max(8,s-28),l)]; }
+const PRIMARY = (SPEC.css && SPEC.css.primary) || '#B69E7F';
+const C = { primary:PRIMARY, surface:'#FFFFFF', canvas:'#F1F5F9', border:'#CBD5E1', text:'#0F172A', textSub:'#64748B', neutral:'#94A3B8', palette:derivePalette(PRIMARY) };
+
+/* ================= RÉSOLUTION DE SOURCES ================= */
+function resolveScalar(from){ if(!from) return null; const p=from.split('.'); if(p[0]==='SCALARS') return SCALARS[p[1]]; return null; }
+function resolveArr(token){ if(token==='ACTIVE') return ACTIVES_M; if(token==='_count') return FACTS._count; if(FACTS[token]) return FACTS[token]; return null; }
+function resolveNum(token, agg, cur){ if(token==='ACTIVE') return cur?agg.cActifs:agg.pActifs; if(token==='_count') return cur?agg.c__count:agg.p__count; if(agg['c_'+token]!=null) return cur?agg['c_'+token]:agg['p_'+token]; if(token && token.indexOf('SCALARS.')===0) return resolveScalar(token); return null; }
+function resolveFlat(from){
+  if(!from) return {};
+  const p=from.split('.');
+  if(p[0]==='DIM_COUNTS') return DIM_COUNTS[p[1]] || {};
+  if(p[0]==='CATEGORY_COUNTS') return (CATEGORY_COUNTS[p[1]] || {})[p[2]] || {};
+  if(p[0]==='BY_DIM'){ const dim=p[1], meas=p[2]; const src=BY_DIM[dim]||{}; const out={}; for (const v in src){ const slot=src[v]; if(slot && slot[meas]) out[v]=sumYearArr(slot[meas]); } return out; }
+  return {};
+}
+function topSlice(dict, topN){ const arr=Object.keys(dict).map(k=>({name:k,value:dict[k]})).sort((a,b)=>b.value-a.value); const head=arr.slice(0,topN); const rest=arr.slice(topN).reduce((s,d)=>s+d.value,0); if (rest>0) head.push({name:'Autres',value:rest}); return head; }
+
+/* ================= NAVIGATION ================= */
+const NAV = SPEC.pages.map(p=>({name:p.name, desc:p.desc||'', subs:p.subs.map(s=>s.name)}));
+const VIEWS = {};
+SPEC.pages.forEach((p,pi)=>p.subs.forEach((s,si)=>{ VIEWS[pi+'-'+si]=function(agg){ renderSub(pi,si,agg); }; }));
+let state = {page:0, sub:0};
+
+/* ================= OPTIONS ECHARTS ================= */
+function gridBase(){
+  return { backgroundColor:'transparent',
+    tooltip:{trigger:'axis',backgroundColor:'#ffffff',borderColor:C.border,borderWidth:1,padding:[8,12],textStyle:{color:C.text,fontSize:12},extraCssText:'box-shadow:0 4px 6px -1px rgba(0,0,0,0.1);border-radius:6px;'},
+    grid:{top:20,right:18,bottom:26,left:8,containLabel:true},
+    xAxis:{type:'category',axisLine:{lineStyle:{color:'#94a3b8'}},axisTick:{show:false},axisLabel:{color:C.textSub,fontSize:11}},
+    yAxis:{type:'value',axisLabel:{color:C.textSub,fontSize:11},splitLine:{lineStyle:{color:'#E2E8F0',type:'dashed'}}} };
+}
+function evoLineOption(cur, prev){
+  const o=gridBase(); o.xAxis.data=MONTH_AXIS; o.yAxis.scale=true;
+  o.legend={show:true,bottom:0,itemGap:18,textStyle:{color:C.textSub,fontSize:11},data:[String(PREV_YEAR),String(CUR_YEAR)]};
+  o.series=[
+    {name:String(PREV_YEAR),type:'line',data:prev,smooth:0.2,symbol:'circle',symbolSize:4,lineStyle:{type:'dashed',width:1.5,color:C.neutral},itemStyle:{color:C.neutral,opacity:0.7},connectNulls:true},
+    {name:String(CUR_YEAR),type:'line',data:cur,smooth:0.2,symbol:'circle',symbolSize:6,lineStyle:{width:2.5,color:C.primary},itemStyle:{color:C.primary,borderWidth:2,borderColor:'#ffffff'},connectNulls:true}
+  ];
+  return o;
+}
+function donutOption(items){
+  return {backgroundColor:'transparent',
+    tooltip:{trigger:'item',backgroundColor:'#ffffff',borderColor:C.border,borderWidth:1,padding:[8,12],textStyle:{color:C.text,fontSize:12},formatter:p=>LBL(p.name)+' : '+fInt(p.value)},
+    legend:{orient:'vertical',right:8,top:'center',itemGap:10,textStyle:{color:C.textSub,fontSize:11}},
+    series:[{type:'pie',center:['35%','50%'],radius:['48%','66%'],avoidLabelOverlap:true,
+      label:{show:true,position:'outside',formatter:p=>p.percent.toLocaleString('fr-FR',{maximumFractionDigits:1})+' %',fontSize:10,color:C.textSub,distanceToLabelLine:5},
+      labelLine:{length:10,length2:6},itemStyle:{borderColor:'#ffffff',borderWidth:2},
+      data:items.map((d,i)=>({name:LBL(d.name),value:d.value,itemStyle:{color:d.name==='Autres'?C.neutral:C.palette[i%C.palette.length]}}))}]};
+}
+function hbarOption(items, fmt){
+  const names=items.map(d=>LBL(d.name));
+  const colors=items.map((d,i)=> d.name==='Autres' ? C.neutral : C.palette[i%C.palette.length]);
+  return {backgroundColor:'transparent',
+    tooltip:{trigger:'axis',axisPointer:{type:'shadow'},backgroundColor:'#ffffff',borderColor:C.border,borderWidth:1,textStyle:{color:C.text,fontSize:12}},
+    grid:{top:8,right:28,bottom:4,left:4,containLabel:true},
+    xAxis:{type:'value',axisLabel:{color:C.textSub,fontSize:11},splitLine:{lineStyle:{color:'#E2E8F0',type:'dashed'}}},
+    yAxis:{type:'category',data:names,inverse:true,axisLine:{show:false},axisTick:{show:false},axisLabel:{color:C.text,fontSize:11}},
+    series:[{type:'bar',barWidth:14,data:items.map((d,i)=>({value:d.value,itemStyle:{color:colors[i],borderRadius:[0,4,4,0]}})),label:{show:true,position:'right',fontSize:11,fontWeight:600,color:C.text,formatter:p=>fmtVal(p.value,fmt)}}]};
+}
+
+/* ================= PASTILLES BARRES MENSUELLES EMPILÉES PAR DIMENSION ================= */
+/* Évolution mensuelle (axe Jan->Déc fixe) d'une mesure ventilée par dimension — année N
+   seule, une série bar empaquetée ('stack') par valeur, couleurs de C.palette. scale:false
+   (les barres doivent partir de 0). Sert aux « flux mensuel par nature/catégorie ». */
+function stackedBarsOption(dim, meas){
+  const src = BY_DIM[dim] || {};
+  const order = Object.keys(src).map(k=>({k, v:(src[k]&&src[k][meas])?sumYearArr(src[k][meas]):0}))
+    .sort((a,b)=>b.v-a.v).slice(0,6).map(o=>o.k);
+  const o = gridBase();
+  o.xAxis.data = MONTH_AXIS;
+  o.yAxis.scale = false;
+  o.legend = { show:true, bottom:0, itemGap:18, textStyle:{ color:C.textSub, fontSize:11 }, data:order.map(k=>LBL(k)) };
+  o.series = order.map((k,i)=>({
+    name:LBL(k), type:'bar', stack:'total',
+    data:(src[k]&&src[k][meas])?yearSeries(src[k][meas], CUR_YEAR):new Array(12).fill(0),
+    itemStyle:{ color:C.palette[i%C.palette.length], borderRadius:i===order.length-1?[2,2,0,0]:0 },
+    emphasis:{ focus:'series' }
+  }));
+  return o;
+}
+
+/* ================= KPI ================= */
+function topNamed(flat){
+  const arr=Object.keys(flat).map(k=>[k,flat[k]]).sort((a,b)=>b[1]-a[1]);
+  if(!arr.length) return '';
+  const top=arr[0][1];
+  return arr.filter(e=>e[1]===top).map(e=>LBL(e[0])).join(' · ');
+}
+function kpiValue(k, agg){
+  const a=k.agg;
+  if(a==='sum'){ const m=k.measure||'_count'; return m==='_count'?agg.c__count:agg['c_'+m]; }
+  if(a==='active') return agg.cActifs;
+  if(a==='scalar') return resolveScalar(k.from);
+  if(a==='top') return topNamed(resolveFlat(k.from));
+  if(a==='ratio'){ const n=resolveNum(k.num,agg,true), d=resolveNum(k.den,agg,true); return d?n/d:null; }
+  return null;
+}
+function kpiYoy(k, agg){
+  if(!k.yoy) return null;
+  const a=k.agg;
+  if(a==='sum'){ const m=k.measure||'_count'; return _pct(m==='_count'?agg.c__count:agg['c_'+m], m==='_count'?agg.p__count:agg['p_'+m]); }
+  if(a==='active') return _pct(agg.cActifs,agg.pActifs);
+  if(a==='ratio'){ const cn=resolveNum(k.num,agg,true), cp=resolveNum(k.num,agg,false), dn=resolveNum(k.den,agg,true), dp=resolveNum(k.den,agg,false); return (dn&&dp)?_pct(cn/dn,cp/dp):null; }
+  return null;
+}
+function trendBadge(v){
+  if(v===null||v===undefined||!isFinite(v)) return '';
+  const y=String(PREV_YEAR);
+  const cls=Math.abs(v)<1?'badge-neutral':(v>0?'badge-pos':'badge-neg');
+  const txt=Math.abs(v)<1?'≈ stable vs '+y:(v>=0?'+':'−')+Math.abs(v).toLocaleString('fr-FR',{maximumFractionDigits:1})+' % vs '+y;
+  return '<span class="trend-badge '+cls+'">'+txt+'</span>';
+}
+function kpiCard(k, agg){
+  const val=kpiValue(k,agg);
+  const valTxt = (k.fmt==='text' || k.agg==='top') ? val : fmtVal(val, k.fmt || (k.agg==='sum' && k.measure && /KM/.test(k.measure.toUpperCase()) ? 'km' : 'int'));
+  const trd = trendBadge(kpiYoy(k,agg));
+  return '<div class="kpi-card"><span class="kpi-bar kpi-bar-primary"></span>'
+    +'<div class="kpi-label"><span class="kpi-label-txt">'+(k.label||'')+'</span>'+relMark(k)+'</div>'
+    +'<div class="kpi-value">'+valTxt+'</div>'
+    +'<div class="kpi-sub">'+sub(k.sub)+'</div>'
+    +'<div class="kpi-footer">'+trd+'</div></div>';
+}
+
+/* ================= VISUELS ================= */
+function vcard(cls, title, subT, body){ return '<div class="'+cls+'"><div class="vhead"><span class="vt">'+(title||'')+'</span><span class="vs">'+(subT||'')+'</span></div>'+body+'</div>'; }
+function chHolder(id){ return '<div class="chart-holder"><div id="'+id+'" class="chart-echarts"></div></div>'; }
+function chDonut(id, cval, csub){ return '<div class="chart-holder"><div id="'+id+'" class="chart-echarts"></div><div class="donut-center"><div class="dc-value">'+cval+'</div><div class="dc-sub">'+csub+'</div></div></div>'; }
+function tableHtml(headers, rows){
+  const th=headers.map(h=>'<th'+(h.num?' class="num"':'')+'>'+h.label+'</th>').join('');
+  const trs=rows.map(r=>'<tr>'+r.map((c,i)=>'<td'+(headers[i].num?' class="num"':'')+'>'+c+'</td>').join('')+'</tr>').join('');
+  return '<div class="table-wrap"><table><thead><tr>'+th+'</tr></thead><tbody>'+trs+'</tbody></table></div>';
+}
+function buildVisual(visuals, idx, v, agg){
+  const wide = (visuals.length===3 && idx===2) ? ' wide' : '';
+  const cls = 'vcard'+wide;
+  const unit = v.unit || 'int';
+  const id = 'vch'+idx;
+  const title = sub(v.title||'')+relMark(v);
+  const subT = sub(v.sub||'');
+  if(v.type==='line'){
+    const arr=resolveArr(v.measure);
+    return {html:vcard(cls, title, (v.unitLabel||fmtUnitLabel(unit))+' · '+CUR_YEAR+' vs '+PREV_YEAR, chHolder(id)), chart:[id, evoLineOption(yearSeries(arr,CUR_YEAR), yearSeries(arr,PREV_YEAR))]};
+  }
+  if(v.type==='ratio-line'){
+    const num=resolveArr(v.num), den=resolveArr(v.den);
+    return {html:vcard(cls, title, (v.unitLabel||fmtUnitLabel(unit))+' · '+CUR_YEAR+' vs '+PREV_YEAR, chHolder(id)), chart:[id, evoLineOption(yearRatio(num,den,CUR_YEAR), yearRatio(num,den,PREV_YEAR))]};
+  }
+  if(v.type==='stacked-bars'){
+    const p=v.from.split('.');
+    const subT2 = subT || ((v.unitLabel||fmtUnitLabel(unit))+' · '+CUR_YEAR);
+    return {html:vcard(cls, title, subT2, chHolder(id)), chart:[id, stackedBarsOption(p[1], p[2])]};
+  }
+  if(v.type==='parts-donut'){
+    const total=resolveScalar(v.total)||0; let used=0; const items=[];
+    for (const p of (v.parts||[])){ const val=resolveScalar(p.from)||0; used+=val; items.push({name:p.name,value:val}); }
+    if(total-used>0) items.push({name:v.restLabel||'Autres', value:total-used});
+    return {html:vcard(cls, title, subT, chDonut(id, fmtVal(total, unit==='km'?'km':'int'), v.centerSub||'')), chart:[id, donutOption(items)]};
+  }
+  if(v.type==='donut'){
+    const items=topSlice(resolveFlat(v.from), v.top||6);
+    const total=items.reduce((s,d)=>s+d.value,0);
+    return {html:vcard(cls, title, subT, chDonut(id, fmtVal(total, unit==='km'?'km':'int'), v.centerSub||'')), chart:[id, donutOption(items)]};
+  }
+  if(v.type==='hbar'){
+    const items=topSlice(resolveFlat(v.from), v.top||10);
+    return {html:vcard(cls, title, subT, chHolder(id)), chart:[id, hbarOption(items, unit)]};
+  }
+  if(v.type==='table'){
+    const rows=buildTableRows(v);
+    return {html:vcard(cls, title, subT, tableHtml(v.cols, rows)), chart:null};
+  }
+  return {html:vcard(cls, title, subT, '<div class="chart-holder"></div>'), chart:null};
+}
+function fmtUnitLabel(u){ return u==='km'?'km':u==='eur'?'€':u==='dur'?'min':u==='pct'?'%':''; }
+function buildTableRows(v){
+  const flat=resolveFlat(v.from);
+  const dim=(v.from||'').split('.')[1];
+  let keys=Object.keys(flat);
+  const sortKey=v.sortBy || 'self';
+  if(sortKey==='self'){ keys.sort((a,b)=>flat[b]-flat[a]); }
+  else if(sortKey.indexOf('measure:')===0){ const m=sortKey.split(':')[1]; const get=k=> (BY_DIM[dim]&&BY_DIM[dim][k]&&BY_DIM[dim][k][m])?sumYearArr(BY_DIM[dim][k][m]):0; keys.sort((a,b)=>get(b)-get(a)); }
+  return keys.map(k=>{
+    const self=flat[k];
+    return v.cols.map(col=>{
+      if(col.name==='name' || col.name===true || col.source==='name') return LBL(k);
+      if(col.source==='self' || !col.source) return fmtVal(self, col.fmt||'int');
+      if(col.source && col.source.indexOf('measure:')===0){ const m=col.source.split(':')[1]; const val=(BY_DIM[dim]&&BY_DIM[dim][k]&&BY_DIM[dim][k][m])?sumYearArr(BY_DIM[dim][k][m]):0; return fmtVal(val, col.fmt||'int'); }
+      if(col.source && col.source.indexOf('SCALARS.')===0){ return fmtVal(resolveScalar(col.source), col.fmt||'int'); }
+      if(col.ratio){ const n=colRatioNum(col.ratio.num,k,self), d=colRatioNum(col.ratio.den,k,self); const r=d?n/d:0; return fmtVal(col.ratio.pct?r*100:r, col.ratio.pct?'pct':(col.fmt||'f1')); }
+      return '';
+    });
+  });
+}
+function colRatioNum(tok, key, self){ if(tok==='self') return self; if(tok && tok.indexOf('SCALARS.')===0) return resolveScalar(tok); if(tok && tok.indexOf('measure:')===0){ return 0; } return 0; }
+
+/* ================= RENDU ================= */
+let charts = {};
+function disposeCharts(){ for (const k of Object.keys(charts)) charts[k].dispose(); charts = {}; }
+function renderCharts(list){
+  requestAnimationFrame(()=>{
+    for (let i=0;i<list.length;i++){ const item=list[i]; const el=document.getElementById(item[0]); if(!el) continue; charts[item[0]]=echarts.init(el); charts[item[0]].setOption(item[1]); }
+  });
+}
+function renderSub(pi, si, agg){
+  const sub_=SPEC.pages[pi].subs[si];
+  const kEl=document.getElementById('kpis');
+  if(kEl) kEl.innerHTML = (sub_.kpis||[]).map(k=>kpiCard(k,agg)).join('');
+  const visuals=(sub_.visuals||[]).slice(0,4);
+  let html=''; const list=[];
+  for (let i=0;i<visuals.length;i++){ const r=buildVisual(visuals,i,visuals[i],agg); html+=r.html; if(r.chart) list.push(r.chart); }
+  const vEl=document.getElementById('visuals');
+  if(vEl) vEl.innerHTML=html;
+  disposeCharts();
+  renderCharts(list);
+}
+function renderInfo(){
+  const pop=document.getElementById('infoPop'); if(!pop) return;
+  const p=SPEC.pages[state.page];
+  let h='<div class="pop-title">'+(p.name||'')+'</div><div class="pop-desc">'+sub(p.desc||'')+'</div>';
+  for (let i=0;i<p.subs.length;i++){ const on=(i===state.sub); h+='<div class="pop-sub'+(on?' on':'')+'" onclick="go('+state.page+','+i+')"><span class="pop-dot" style="background:'+(on?C.primary:C.textSub)+';"></span><span>'+(p.subs[i].name||'')+'</span></div>'; }
+  h+='<div class="pop-note">Données fictives — Maquette Power BI haute-fidélité.'+reliabilityLegend()+'</div>';
+  pop.innerHTML=h;
+}
+function renderNav(){
+  const l1=document.getElementById('navL1');
+  if(l1) l1.innerHTML = SPEC.pages.map((p,i)=>'<div class="pill '+(i===state.page?'on':'off')+'" onclick="go('+i+',0)">'+(p.name||'')+'</div>').join('');
+  const l2=document.getElementById('navL2');
+  if(l2){ const subs=SPEC.pages[state.page].subs; l2.innerHTML = subs.map((s,i)=>'<div class="l2 '+(i===state.sub?'on':'off')+'" onclick="go('+state.page+','+i+')">'+(s.name||'')+'</div>').join(''); }
+}
+function renderPage(){ renderNav(); renderInfo(); renderSub(state.page, state.sub, aggregates()); }
+function go(p, s){ state.page=p; state.sub=s; renderPage(); }
+
+/* ================= PANE FILTRES (UI seule) ================= */
+const FILT = { years:[], quarter:null, month:null, dims:{} };
+function isFiltered(){ return FILT.years.length>0 || !!FILT.quarter || !!FILT.month || Object.keys(FILT.dims).some(k=>FILT.dims[k]); }
+function setCls(el, cls){ if(el) el.className=cls; }
+function syncBadge(){ const b=document.getElementById('filtBadge'); if(b) setCls(b, isFiltered()?'badge-filt show':'badge-filt'); }
+function paintChiclets(id, group){
+  const c=document.getElementById(id); if(!c) return;
+  const btns=c.querySelectorAll?c.querySelectorAll('.chiclet'):[];
+  for (let i=0;i<btns.length;i++){ const b=btns[i], val=b.getAttribute('data-v'); let on=false;
+    if(group==='years') on=FILT.years.indexOf(val)>=0;
+    else if(group==='quarter') on=FILT.quarter===val;
+    setCls(b, on?'chiclet on':'chiclet'); }
+}
+function clearDdVal(ddId){ const root=document.getElementById(ddId); if(!root) return; const lab=root.querySelector?root.querySelector('.dd-val'):null; const btn=root.querySelector?root.querySelector('.dd-btn'):null; if(lab&&btn) lab.textContent=btn.getAttribute('data-all')||''; setCls(root,'dd'); }
+function initChicletGroup(containerId, group, values){
+  const c=document.getElementById(containerId); if(!c) return;
+  let html=''; for (const v of values){ html+='<button class="chiclet" type="button" data-g="'+group+'" data-v="'+v+'">'+v+'</button>'; }
+  c.innerHTML=html;
+}
+function initDropdown(ddId, menuId, title, values, dimKey){
+  const root=document.getElementById(ddId); if(!root) return;
+  const btn=root.querySelector?root.querySelector('.dd-btn'):null; const menu=document.getElementById(menuId); if(!btn||!menu) return;
+  if(btn.getAttribute('data-all')){} btn.setAttribute('data-all', title);
+  const lab=btn.querySelector('.dd-val'); if(lab) lab.textContent=title;
+  let html='<div class="dd-opt on" data-v="">'+title+'</div>';
+  for (const v of values) html+='<div class="dd-opt" data-v="'+v+'">'+LBL(v)+'</div>';
+  menu.innerHTML=html;
+  if(btn.addEventListener){ btn.addEventListener('click',function(ev){ ev.stopPropagation(); setCls(root, root.className.indexOf('open')>=0?'dd':'dd open'); }); }
+  const opts=menu.querySelectorAll?menu.querySelectorAll('.dd-opt'):[];
+  for (let i=0;i<opts.length;i++){ opts[i].addEventListener('click',(function(o){ return function(ev){ ev.stopPropagation(); const val=o.getAttribute('data-v'); FILT.dims[dimKey]=val||null; const all=menu.querySelectorAll('.dd-opt'); for(let j=0;j<all.length;j++) setCls(all[j], all[j].getAttribute('data-v')===val?'dd-opt on':'dd-opt'); if(lab) lab.textContent = val?LBL(val):title; setCls(root,'dd'); syncBadge(); }; })(opts[i])); }
+}
+function resetFilters(){
+  FILT.years=[]; FILT.quarter=null; FILT.month=null; FILT.dims={};
+  paintChiclets('fYears','years'); paintChiclets('fQ','quarter');
+  clearDdVal('fMonthDd');
+  for (const dk of DIM_NAMES) clearDdVal('fDim'+(DIM_NAMES.indexOf(dk)+1)+'Dd');
+  syncBadge();
+}
+function wireFilters(){
+  initChicletGroup('fYears','years',[String(PREV_YEAR),String(CUR_YEAR)]);
+  initChicletGroup('fQ','quarter',['T1','T2','T3','T4']);
+  const moisDd=document.getElementById('fMonthDd');
+  if(moisDd && moisDd.querySelector){ const btn=moisDd.querySelector('.dd-btn'); const menu=document.getElementById('fMonthMenu'); if(btn&&menu){ let html='<div class="dd-opt on" data-v="">Tous les mois</div>'; for(let i=0;i<12;i++) html+='<div class="dd-opt" data-v="'+(i+1)+'">'+MONTH_NAMES[i]+'</div>'; menu.innerHTML=html; btn.addEventListener('click',function(ev){ev.stopPropagation(); setCls(moisDd, moisDd.className.indexOf('open')>=0?'dd':'dd open');}); const opts=menu.querySelectorAll('.dd-opt'); for(let i=0;i<opts.length;i++){ opts[i].addEventListener('click',(function(o){return function(ev){ev.stopPropagation();const val=o.getAttribute('data-v');FILT.month=val||null;const all=menu.querySelectorAll('.dd-opt');for(let j=0;j<all.length;j++) setCls(all[j],all[j].getAttribute('data-v')===val?'dd-opt on':'dd-opt');const lab=btn.querySelector('.dd-val');if(lab) lab.textContent=val?MONTH_NAMES[parseInt(val,10)-1]:'Tous les mois';setCls(moisDd,'dd');FILT.quarter=null;paintChiclets('fQ','quarter');syncBadge();};})(opts[i])); } } }
+  const pane=document.getElementById('filterPane');
+  if(pane && pane.addEventListener){ pane.addEventListener('click',function(e){ const t=e.target; if(!t) return; const g=t.getAttribute&&t.getAttribute('data-g'); if(g==='years'){const v=t.getAttribute('data-v');const i=FILT.years.indexOf(v);if(i>=0)FILT.years.splice(i,1);else FILT.years.push(v);paintChiclets('fYears','years');} else if(g==='quarter'){const v=t.getAttribute('data-v');FILT.quarter=FILT.quarter===v?null:v;FILT.month=null;paintChiclets('fQ','quarter');clearDdVal('fMonthDd');} else if(t.id==='fReset'){resetFilters();return;} syncBadge(); }); const f=document.getElementById('fFrom'),to=document.getElementById('fTo'); if(f&&f.addEventListener)f.addEventListener('change',function(){syncBadge();}); if(to&&to.addEventListener)to.addEventListener('change',function(){syncBadge();}); }
+  /* dimension slicers : 2 dropdowns max sur les 2 premières dims */
+  for(let di=0; di<Math.min(2,DIM_NAMES.length); di++){
+    const dn=DIM_NAMES[di];
+    const lab=document.getElementById('fDimLabel'+(di+1)); if(lab) lab.textContent=dn;
+    initDropdown('fDim'+(di+1)+'Dd','fDim'+(di+1)+'Menu', 'Tous', Object.keys(DIM_COUNTS[dn]||{}), dn);
+  }
+}
+
+/* ================= SCALE TO FIT ================= */
+const SLIDE=document.getElementById('slide');
+function fit(){ const w=window.innerWidth||1920, h=window.innerHeight||1080; const s=Math.min(w/1920,h/1080); if(SLIDE) SLIDE.style.transform='translate('+((w-1920*s)/2)+'px,'+((h-1080*s)/2)+'px) scale('+s+')'; }
+if(window.addEventListener) window.addEventListener('resize',fit);
+fit();
+
+wireFilters();
+renderPage();
+</script>
+</body>
+</html>
