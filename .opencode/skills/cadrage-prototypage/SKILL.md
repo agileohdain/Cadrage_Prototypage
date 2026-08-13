@@ -41,8 +41,10 @@ marqueur `*`). Le périmètre de la maquette est **filtré par priorité**.
 
 1. Le nom vient de l'argument (si absent, je le demande). **Casse respectée
    telle quelle**, je ne propose aucun nom.
-2. Je confirme le nom via l'outil `question` (option **Oui** + saisie libre) —
-   je ne crée rien tant qu'il n'est pas confirmé.
+2. Je confirme le nom via l'outil `question` : **une seule option** « Oui /
+   Confirmer ». Je **n'ajoute pas** d'option « Saisir un autre nom » — l'outil
+   `question` ajoute **automatiquement** un champ « Type your own answer » (le
+   dupliquer crée un doublon). Je ne crée rien tant qu'il n'est pas confirmé.
 3. Garde client existant : si `clients/<Nom>/` existe, je demande (régénérer
    la maquette / refaire le cadrage / modifier le nom).
 4. Si l'utilisateur est en mode PLAN, je demande le passage en BUILD **une
@@ -328,6 +330,13 @@ Formats auto : PCT/TAUX→pct, COUT/PRIX/MONTANT→eur, KM→km, DUREE/DELAI→d
 - **Un KPI = une valeur parlante** : je choisis le chiffre unique que le
   libellé signifie (build-views.py fait le reste).
 - **Formats `fmt`/`unit`** : `int | km | eur | f1 | dur | pct | text`.
+- **Espacement : grille 8px stricte (bloquant)** : tout gap/padding/margin du
+  template est un multiple de 8 (8/16/24) — le rythme structural est
+  `var(--gap)` (= 16px). Si j'ajuste la maquette (boucle d'ajustement), je ne
+  réintroduis **jamais** de valeur hors-grille (6, 10, 12, 14 px). Il n'y a
+  **plus de footer** : la mention « Données fictives » et la légende de
+  fiabilité (`*` partielle orange / inconnue rouge) sont dans l'infobulle
+  d'info (`.pop-note`, rendue par `renderInfo()`).
 - **Aucune erreur JS tolérée (bloquant)** : le smoke test de `render.py` doit
   passer (exit 0) — s'il échoue, je corrige `nav.json` (jamais le HTML) et je
   relance `build-views.py` + `render.py`.
