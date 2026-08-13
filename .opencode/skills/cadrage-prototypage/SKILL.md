@@ -259,6 +259,26 @@ existe je passe à l'étape 2, sinon je l'écris depuis l'arbre validé.
   toute référence inconnue = erreur listant les identifiants disponibles.
 - Exemple complet : `clients/_template/nav.example.json`.
 
+## Résolution des références dans `nav.json`
+
+> Chaque champ d'un KPI/visuel résout vers une source précise du contrat `DATA`.
+> `build-views.py` valide **chaque** référence et **échoue** en listant les
+> identifiants disponibles (source : `build-views.py:check_*`).
+
+| Champ | Résout vers | Valeurs acceptées |
+|---|---|---|
+| `scalar.from`, `table.share` | **SCALARS** | clé scalaire (`NB_X` / `AVG_X` / `DISTINCT_X`) — **jamais** `_count`/`ACTIVE`/mesure |
+| `ratio.den` | SCALARS \| mesure \| `_count` \| `ACTIVE` | le plus permissif (le seul à accepter les 4) |
+| `ratio.num` | mesure \| `_count` \| `ACTIVE` | **pas** de scalaire |
+| `line.m`, `dim.m`, `stacked.m`, `table.m`, `table.cols[]`, `ratio-line.num` | mesure \| `_count` | |
+| `dim.dim`, `stacked.dim`, `table.dim` | dimension (colonne jointe) | nom d'une `dimensions[].columns[].name` |
+| `cat.from`, `table.cat` | CATEGORY_COUNTS | `<sheet>.<col>` |
+| `top.from` | DIM_COUNTS \| CATEGORY_COUNTS | `<col>` ou `<sheet>.<col>` |
+
+**Piège fréquent** : `table.share` et `scalar.from` attendent une **clé scalaire**
+(ex. `NB_FAIT_SESSIONS`), **pas** `_count`. Pour un « pourcentage du total », on
+met la logique sur le KPI (`ratio.den="_count"`), jamais sur `table.share`.
+
 ## Mapping matrice.xlsx → maquette
 
 | Colonne matrice.xlsx | Usage dans le skill |
@@ -274,6 +294,37 @@ existe je passe à l'étape 2, sinon je l'écris depuis l'arbre validé.
 | Axes d'analyses | Dimensions du schéma + slicers |
 | Formules | Sémantique du KPI (sum / ratio / count / flag) |
 | Commentaires | Notes éventuelles dans le cadrage |
+
+## Contrat `data-spec → DATA` (clés produites par `extract-data.py`)
+
+> `generate-data.py` produit `donnees.xlsx`, puis `extract-data.py` en extrait le
+> contrat `DATA` (caché dans `.data-cache.json`) que lit `build-views.py`. Cette
+> table est l'**unique source de vérité** des identifiants référençables dans
+> `nav.json` — écrivez `data-spec.json` puis `nav.json` **avec ces clés en tête**.
+> Depuis cette version, `generate-data.py` **affiche toutes les clés** en fin de
+> run (bloc `CLÉS DISPONIBLES POUR nav.json`) : recopiez-les telles quelles.
+
+| Source `data-spec` | Sortie `DATA` | Clé / chemin exact | Référençable dans `nav.json` comme |
+|---|---|---|---|
+| `fact` (feuille faits) | `FACTS` + mesures | — | `count`, `sum{m}`, `ratio`, `line`, `dim.m`… |
+| `dimensions[].columns[].name` (jointes à la faits) | `DIM_COUNTS` | `<col>` → {modalité: nb} | `dim.dim`, `stacked.dim`, `table.dim`, `top.from="DIM_COUNTS.<col>"` |
+| `extra_sheets` × colonne **categorical** | `CATEGORY_COUNTS` | `<sheet>.<col>` → {modalité: nb} | `cat.from`, `table.cat`, `top.from="CATEGORY_COUNTS.<sheet>.<col>"` |
+| toute feuille (faits/dims/ponts/extra) | `SCALARS` | **`NB_<SHEET>`** = nb de lignes | `scalar.from`, `ratio.den`, `table.share` |
+| dimension jointe (depuis DIM_COUNTS) | `SCALARS` | **`NB_<DIM_COL>`** = nb de modalités | idem SCALARS |
+| colonne **numeric** d'une feuille **hors-faits** | `SCALARS` | **`AVG_<COL>`** = moyenne | idem SCALARS |
+| colonne **id** (où qu'elle soit) | `SCALARS` | **`DISTINCT_<SHEET>_<COL>`** = nb distinct | idem SCALARS |
+| dim dont le sheet matche `client\|utilisateur\|employe\|…` | `ACTIVE_MASKS` | — | `active` (KPI), `ratio.den="ACTIVE"` |
+
+**Normalisation des noms** : `re.sub(r"\W+", "_", nom).upper()` — tout caractère
+non alphanumérique devient `_`, puis majuscules.
+
+**Pièges** : (1) les colonnes **numeric** de la **faits** deviennent des *mesures*
+(`FACTS`), **pas** des `AVG_` — seules les numerics *hors-faits* produisent un
+`AVG_<COL>`. (2) `CATEGORY_COUNTS` ne contient que les feuilles **non atteintes
+depuis la faits** (i.e. `extra_sheets`) — une dimension jointe est dans
+`DIM_COUNTS`, pas dans `CATEGORY_COUNTS`. (3) Une dimension produit **deux**
+scalaires : `NB_<SHEET>` (lignes de la feuille) et `NB_<DIM_COL>` (modalités de
+la colonne) — ex. `NB_DIM_ZONE` vs `NB_ZONE`.
 
 ## Patterns réutilisables (assemblage, pas invention)
 

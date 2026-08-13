@@ -3,8 +3,8 @@
 
   "labels": {"Grand compte": "Grand compte"},
 
-  "_comment_kpi": "Types de KPI : count (volume faits) | sum {m} | active | ratio {num, den:_count|ACTIVE|mesure|SCALARS.x} | scalar {from: NB_X|AVG_X, sans YoY} | top {from: dim ou CATEGORY_COUNTS.f.c}. label/sub/fmt optionnels (défauts auto). pitch:true optionnel. reliability: fiable(defaut)|partielle|inconnue + source(texte libre) -> marqueur * sur la maquette (issu du Matrice.xlsx).",
-  "_comment_visual": "Types de visuels : line {m} | ratio-line {num, den} | dim {dim, m?, as?} | cat {from: FEUILLE.Col} | stacked {dim, m} | table {dim|cat, m?, cols?, share?}. m optionnel (défaut _count) ; dim/cat = donut si <= 6 modalités sinon hbar (override 'as'). title/unit/sub optionnels (défauts auto). <= 4 visuels et 3-5 KPI par sous-page. reliability/source optionnels (même règle que les KPI).",
+  "_comment_kpi": "Types de KPI : count (volume faits) | sum {m} | active | ratio {num, den:_count|ACTIVE|mesure|SCALARS.x} | scalar {from: NB_X|AVG_X|DISTINCT_X, sans YoY} | top {from: dim ou CATEGORY_COUNTS.f.c}. label/sub/fmt optionnels (défauts auto). pitch:true optionnel. reliability: fiable(defaut)|partielle|inconnue + source(texte libre) -> marqueur * sur la maquette (issu du Matrice.xlsx). Résolution (voir SKILL.md 'Résolution des références') : ratio.num=mesure|_count|ACTIVE (PAS de scalaire) ; ratio.den=scalaire|mesure|_count|ACTIVE (le seul qui accepte les 4) ; scalar.from=clé scalaire UNIQUEMENT.",
+  "_comment_visual": "Types de visuels : line {m} | ratio-line {num, den} | dim {dim, m?, as?} | cat {from: FEUILLE.Col} | stacked {dim, m} | table {dim|cat, m?, cols?, share?}. m optionnel (défaut _count) ; dim/cat = donut si <= 6 modalités sinon hbar (override 'as'). title/unit/sub optionnels (défauts auto). <= 4 visuels et 3-5 KPI par sous-page. reliability/source optionnels (même règle que les KPI). PIEGE : table.share attend une clé SCALAIRE (ex. NB_FAIT_SAV), JAMAIS _count/ACTIVE/mesure — pour un % du total, mettre ratio.den='_count' sur le KPI.",
 
   "pages": [
     {
