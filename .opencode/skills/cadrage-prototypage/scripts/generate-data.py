@@ -295,6 +295,21 @@ def self_check(xlsx_path, spec):
                      "dims=%s | entité_active=%s\n"
                      % (meta["fact_sheet"], data["N"], meta["measures"],
                         [d["name"] for d in meta["dims"]], meta["activity_entity"]))
+    sys.stderr.write("--- CLÉS DISPONIBLES POUR nav.json ---\n")
+    sys.stderr.write("  Mesures        : %s\n"
+                     % ", ".join(list(meta["measures"]) + ["_count"]))
+    sys.stderr.write("  Dimensions     : %s\n"
+                     % ", ".join(d["name"] for d in meta["dims"]))
+    scalars = sorted(data.get("SCALARS", {}).keys())
+    if scalars:
+        sys.stderr.write("  SCALARS        : %s\n" % ", ".join(scalars))
+    cats = sorted("%s.%s" % (s, c)
+                  for s, cols in data.get("CATEGORY_COUNTS", {}).items()
+                  for c in cols)
+    if cats:
+        sys.stderr.write("  CATEGORY_COUNTS: %s\n" % ", ".join(cats))
+    if meta.get("activity_entity"):
+        sys.stderr.write("  Entité active  : %s\n" % meta["activity_entity"])
 
 
 # ---------------------------------------------------------------------------
