@@ -113,7 +113,8 @@ Je présente en une seule proposition compacte, cohérente de bout en bout,
   thèmes proches, scinder un thème dense), 3-5 KPIs par sous-page, ≤ 4 visuels.
   Chaque KPI hérite de sa **fiabilité** (`reliability`) et de sa **source**
   (`source` = « Système : <provenance> — Source : <source données> ») issues
-  du matrice.xlsx — celles `partielle`/`inconnue` porteront un `*`.
+  du matrice.xlsx — celles `partielle`/`inconnue` porteront un marqueur
+  (`*` orange ou `◆` rouge).
 - **Couleurs secondaires + titre/sous-titre** : le Primary vient du client ;
   je propose les valeurs canoniques du mode (table ci-dessous), **chaque
   couleur nommée en clair**. Titre/sous-titre déduits du domaine.
@@ -161,9 +162,10 @@ client.
 
 ## Phase 2 — Génération (CLIENT.md + data-spec.json + donnees.xlsx)
 
-1. **J'écris `CLIENT.md`** complet (identité, couleurs validées, « Contexte &
-   Données », section « Cadrage & périmètre » avec le scope retenu et le nb
-   d'indicateurs marqués) et **`data-spec.json`** (schéma validé + `seed`
+1. **J'écris `CLIENT.md`** slim : identité (Brand Name, Report Title, Report
+   Subtitle, Domaine) + couleurs validées. **Seuls ces 9 champs sont lus** par
+   `render.py`/`generate-pitch.py` — le reste du contexte vit dans `cadrage.md`
+   et `data-spec.json`. Et **`data-spec.json`** (schéma validé + `seed`
    fixe — schéma : `clients/_template/data-spec.example.json`).
 2. **Je génère les données** :
    ```bash
@@ -252,7 +254,7 @@ existe je passe à l'étape 2, sinon je l'écris depuis l'arbre validé.
   inférés du nom de mesure.
 - **`"pitch": true`** optionnel = mis en avant dans `pitch.md`.
 - **`"reliability"`/`"source"`** optionnels sur tout KPI/visuel :
-  `fiable` (défaut, rien) · `partielle` (`*` orange) · `inconnue` (`*` rouge).
+  `fiable` (défaut, rien) · `partielle` (`*` orange) · `inconnue` (`◆` rouge).
   Issus du matrice.xlsx (`Fiabilités des données` + `Provenance/Source`).
   Une `Sources des données` vide → `inconnue` (source non identifiée).
 - **Bornes (bloquant)** : 3-5 KPI et ≤ 4 visuels par sous-page (6 KPI max) ;
@@ -365,8 +367,8 @@ Formats auto : PCT/TAUX→pct, COUT/PRIX/MONTANT→eur, KM→km, DUREE/DELAI→d
   Modèle vierge : `Matrice.xlsx` (racine) + `clients/_template/matrice.xlsx`.
 - `cadrage.json` — matrice.xlsx normalisé (écrit par `parse-matrice.py`).
 - `cadrage.md` — **livrable cadrage** (écrit par `generate-cadrage.py`).
-- `CLIENT.md` — contrat de marque écrit par le skill ; `render.py` n'y lit que
-  l'identité et les couleurs.
+- `CLIENT.md` — contrat de marque (slim) écrit par le skill ; `render.py` y
+  lit l'identité et les couleurs, `generate-pitch.py` le domaine (+ titre).
 - `data-spec.json` — spec de génération (écrit par le skill).
 - `donnees.xlsx` — généré par `generate-data.py`. Contrat extrait : `FACTS` /
   `BY_DIM` / `DIM_COUNTS` / `CATEGORY_COUNTS` / `ACTIVE_MASKS` / `SCALARS` /
@@ -388,7 +390,7 @@ Formats auto : PCT/TAUX→pct, COUT/PRIX/MONTANT→eur, KM→km, DUREE/DELAI→d
   (Étape 0.2) entrent dans la maquette ; `cadrage.md` couvre l'ensemble.
   Auto-déduction si un seul niveau de priorité est présent (pas de question).
 - **Marqueur de fiabilité (3 niveaux)** : `partielle` → `*` orange,
-  `inconnue` → `*` rouge, `fiable` → rien ; tooltip natif + légende pied de
+  `inconnue` → `◆` rouge, `fiable` → rien ; tooltip natif + légende pied de
   page ; source de données vide → `inconnue`.
 - **Couleurs secondaires nommées en clair (bloquant)** : toute couleur proposée
   est accompagnée de son nom en toutes lettres.
@@ -400,7 +402,7 @@ Formats auto : PCT/TAUX→pct, COUT/PRIX/MONTANT→eur, KM→km, DUREE/DELAI→d
   `var(--gap)` (= 16px). Si j'ajuste la maquette (boucle d'ajustement), je ne
   réintroduis **jamais** de valeur hors-grille (6, 10, 12, 14 px). Il n'y a
   **plus de footer** : la mention « Données fictives » et la légende de
-  fiabilité (`*` partielle orange / inconnue rouge) sont dans l'infobulle
+  fiabilité (`*` partielle orange / `◆` inconnue rouge) sont dans l'infobulle
   d'info (`.pop-note`, rendue par `renderInfo()`).
 - **Aucune erreur JS tolérée (bloquant)** : le smoke test de `render.py` doit
   passer (exit 0) — s'il échoue, je corrige `nav.json` (jamais le HTML) et je

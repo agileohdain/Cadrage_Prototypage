@@ -84,9 +84,9 @@ Feuille **KPI** (11 colonnes) — remplie par le conseiller **avec** le client :
   couleurs du client, KPIs avec variation N vs N-1, panneau de filtres
   interactif, navigation à deux niveaux, visuels ECharts (courbes, donuts,
   barres, tables).
-- **Marqueur `*` de fiabilité** — un astérisque orange (`Partielle`) ou rouge
+- **Marqueur de fiabilité** — `*` orange (`Partielle`) ou `◆` rouge
   (`Inconnue`) à côté des KPI/visuels concernés + info-bulle au survol +
-  légende en pied de page. `Fiable` n'est pas marqué.
+  légende dans l'infobulle d'info. `Fiable` n'est pas marqué.
 - **`presentation/pitch.md`** — script du conseiller (storytelling + chiffres).
 
 ## Dossier client

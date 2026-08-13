@@ -133,7 +133,7 @@ def main():
     A("|---|---:|:---:|")
     for f in ("fiable", "partielle", "inconnue"):
         lab, _ = FIAB_LABEL[f]
-        mark = "—" if f == "fiable" else ("`*` orange" if f == "partielle" else "`*` rouge")
+        mark = "—" if f == "fiable" else ("`*` orange" if f == "partielle" else "`◆` rouge")
         A("| %s | %d | %s |" % (lab, stats.get(f, 0), mark))
     A("")
 
@@ -204,7 +204,7 @@ def main():
     A("")
     if alerts:
         A("Indicateurs à fiabilité partielle ou source non identifiée — signalés "
-          "par un `*` sur la maquette :")
+          "par un marqueur (`*`/`◆`) sur la maquette :")
         A("")
         A("| Indicateur | Fiabilité | Système source | Source données | Raison |")
         A("|---|---|---|---|---|")

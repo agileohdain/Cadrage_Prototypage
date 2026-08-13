@@ -35,8 +35,8 @@
 - **Pas de footer** : la mention « Données fictives — Maquette Power BI
   haute-fidélité. » et la légende de fiabilité sont rendues dans l'infobulle
   d'info (`.pop-note`, italique, bordure haute) par `renderInfo()` ; les
-  niveaux `partielle` (orange `#D97706`) et `inconnue` (rouge `#DC2626`) y
-  sont différenciés par des pastilles colorées.
+  niveaux sont différenciés par **forme + couleur** : `*` orange `#D97706`
+  (`partielle`) et `◆` rouge `#DC2626` (`inconnue`).
 
 ## 2. Couleurs
 
@@ -157,21 +157,25 @@ caractères, chaque conteneur de chart reçoit son `echarts.init`, **aucun
 visuel sans données** (un `from:`/`measure` qui ne résout rien = échec), et
   ce pour **toutes** les sous-pages (`go(p,s)`) et toutes les `VIEWS`.
 
-## 10. Marqueur de fiabilité (`*` — cadrage)
+## 10. Marqueur de fiabilité (`*` / `◆` — cadrage)
 
 - Origine : `reliability` (`fiable` | `partielle` | `inconnue`) + `source` (texte
   libre) sur **tout KPI ou visuel** de `views.json`, propagés depuis `nav.json`
   par `build-views.py` (`_attach_meta`), issus du `Matrice.xlsx`.
-- Rendu : `relMark(node)` ajoute un `<span class="rel-mark …">*</span>` après le
-  libellé KPI (`kpiCard`) ou le titre de visuel (`buildVisual`). `partielle` →
-  orange `#D97706`, `inconnue` → rouge `#DC2626`, `fiable`/absent → rien.
+- Rendu : `relMark(node)` ajoute un `<span class="rel-mark …">…</span>` après le
+  libellé KPI (`kpiCard`) ou le titre de visuel (`buildVisual`). Glyphe + couleur
+  (gras) : `*` orange `#D97706` à 16px (`partielle`), `◆` rouge `#DC2626` à 12px
+  (`inconnue`, réduit pour équilibrer optiquement avec l'astérisque), `fiable`/absent
+  → rien. Dans `kpiCard`, le texte du libellé est
+  isolé dans `<span class="kpi-label-txt">` (ellipsis) afin que le marqueur ne
+  soit jamais rogné par `overflow:hidden`.
 - Tooltip **natif** (`title=""`) : la raison + la `source` + « Détail dans
   cadrage.md ». Pas de tooltip CSS (les cartes sont `overflow:hidden` →
   rognage) ; le `title` est fiable et sans dépendance de positionnement.
 - Légende dans l'infobulle (`.pop-note`, plus de footer) : `reliabilityLegend()`
-  détecte les niveaux présents et affiche une pastille colorée par niveau —
-  `partielle` → orange `#D97706` « Fiabilité partielle / à valider »,
-  `inconnue` → rouge `#DC2626` « Source non identifiée » — suivie de
+  détecte les niveaux présents et affiche le marqueur correspondant —
+  `partielle` → `*` orange `#D97706` « Fiabilité partielle / à valider »,
+  `inconnue` → `◆` rouge `#DC2626` « Source non identifiée » — suivie de
   « détail dans cadrage.md ». N'apparaît que si au moins un KPI/visuel est
   marqué.
 - Invariant : `relMark` ne lève jamais (node absent → chaîne vide) ; le smoke

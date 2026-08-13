@@ -80,7 +80,8 @@ html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#
 .kpi-card{position:relative;flex:1;height:130px;background:var(--card-bg);border:1px solid var(--border);border-radius:10px;padding:16px;overflow:hidden;display:flex;flex-direction:column;justify-content:space-between;box-shadow:0 1px 2px rgba(0,0,0,.04);box-sizing:border-box;}
 .kpi-bar{position:absolute;left:0;top:0;bottom:0;width:4px;}
 .kpi-bar-primary{background:var(--primary);}
-.kpi-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.kpi-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text-secondary);display:flex;align-items:center;gap:4px;}
+.kpi-label .kpi-label-txt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
 .kpi-value{font-size:28px;font-weight:700;color:var(--text-primary);line-height:1.1;}
 .kpi-sub{font-size:11px;color:var(--text-secondary);}
 .kpi-footer{min-height:24px;display:flex;align-items:center;}
@@ -109,10 +110,10 @@ html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#
 .table-wrap tbody tr:hover{background:var(--border);}
 .table-wrap td.num,.table-wrap th.num{text-align:right;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;}
 
-/* Marqueur de fiabilité (* = source partielle / non identifiée — voir cadrage.md) */
-.rel-mark{display:inline-block;margin-left:3px;font-weight:800;cursor:help;font-size:13px;line-height:1;vertical-align:middle;}
+/* Marqueur de fiabilité (* = partielle / ◆ = source non identifiée — voir cadrage.md) */
+.rel-mark{display:inline-block;margin-left:3px;font-weight:800;cursor:help;font-size:16px;line-height:1;vertical-align:middle;flex:none;}
 .rel-mark.partielle{color:#D97706;}
-.rel-mark.inconnue{color:#DC2626;}
+.rel-mark.inconnue{color:#DC2626;font-size:12px;}
 </style>
 </head>
 <body>
@@ -243,7 +244,8 @@ function relMark(node){
   var tip = lbl;
   if(node.source) tip += ' — ' + node.source;
   tip += '. Détail dans cadrage.md.';
-  return '<span class="rel-mark '+cls+'" title="'+escAttr(tip)+'" aria-label="'+escAttr(lbl)+'" role="img">*</span>';
+  var g = r==='partielle' ? '*' : '◆';
+  return '<span class="rel-mark '+cls+'" title="'+escAttr(tip)+'" aria-label="'+escAttr(lbl)+'" role="img">'+g+'</span>';
 }
 function hasReliabilityFlag(){
   if(!SPEC.pages) return false;
@@ -265,7 +267,7 @@ function reliabilityLegend(){
   }
   var out='';
   if(hasP) out+='<br><span class="rel-mark partielle">*</span> Fiabilité partielle / à valider';
-  if(hasI) out+='<br><span class="rel-mark inconnue">*</span> Source non identifiée';
+  if(hasI) out+='<br><span class="rel-mark inconnue">◆</span> Source non identifiée';
   if(hasP||hasI) out+=' — détail dans cadrage.md.';
   return out;
 }
@@ -391,7 +393,7 @@ function kpiCard(k, agg){
   const valTxt = (k.fmt==='text' || k.agg==='top') ? val : fmtVal(val, k.fmt || (k.agg==='sum' && k.measure && /KM/.test(k.measure.toUpperCase()) ? 'km' : 'int'));
   const trd = trendBadge(kpiYoy(k,agg));
   return '<div class="kpi-card"><span class="kpi-bar kpi-bar-primary"></span>'
-    +'<div class="kpi-label">'+(k.label||'')+relMark(k)+'</div>'
+    +'<div class="kpi-label"><span class="kpi-label-txt">'+(k.label||'')+'</span>'+relMark(k)+'</div>'
     +'<div class="kpi-value">'+valTxt+'</div>'
     +'<div class="kpi-sub">'+sub(k.sub)+'</div>'
     +'<div class="kpi-footer">'+trd+'</div></div>';
